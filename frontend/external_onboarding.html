@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>LandIQ — External LLM Onboarding</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <style>
+    :root{--forest:#0d2818;--forest-mid:#1a3d28;--forest-lt:#2d6a42;--cream:#f5f0e8;--almond:#e8dcc8;--border:#d4c9b0;--gold:#c9a654;--text:#0a1f12;--muted:#5a7060;--white:#fff;--red:#c0392b;--radius:12px}
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{background:var(--cream);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh}
+    nav{background:var(--forest);padding:14px 32px;display:flex;align-items:center;justify-content:space-between}
+    .logo{font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:var(--white)}
+    .logo span{color:var(--gold)}
+    .nav-back{color:rgba(255,255,255,.6);text-decoration:none;font-size:13px}
+    .nav-back:hover{color:var(--white)}
+    .main{max-width:760px;margin:0 auto;padding:48px 32px}
+    .page-title{font-family:'Playfair Display',serif;font-size:32px;margin-bottom:8px}
+    .page-sub{font-size:14px;color:var(--muted);margin-bottom:12px;line-height:1.7}
+
+    /* demo banner */
+    .demo-banner{background:#fff8e8;border:1.5px solid var(--gold);border-radius:10px;padding:14px 18px;margin-bottom:28px;font-size:13px;display:flex;align-items:flex-start;gap:10px}
+    .demo-banner b{color:var(--text)}
+    .demo-banner .demo-toggle{margin-left:auto;padding:6px 14px;background:var(--gold);color:var(--forest);border:none;border-radius:100px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0}
+
+    /* what this does explanation */
+    .explain-box{background:var(--forest);color:rgba(255,255,255,.85);border-radius:var(--radius);padding:20px 24px;margin-bottom:28px;font-size:13px;line-height:1.8}
+    .explain-box .etitle{font-weight:700;color:var(--gold);margin-bottom:8px;font-size:14px}
+    .explain-box code{background:rgba(255,255,255,.1);padding:2px 7px;border-radius:4px;font-family:'JetBrains Mono',monospace;font-size:11px}
+
+    .step-card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:16px;overflow:hidden}
+    .step-header{display:flex;align-items:center;gap:14px;padding:18px 24px}
+    .step-num{width:32px;height:32px;border-radius:50%;background:var(--forest);color:var(--white);font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+    .step-num.done{background:var(--forest-lt)}
+    .step-num.gold{background:var(--gold);color:var(--forest)}
+    .step-title{font-size:14px;font-weight:700;color:var(--text)}
+    .step-desc{font-size:11px;color:var(--muted);margin-top:2px}
+    .step-badge{margin-left:auto;font-size:10px;font-weight:700;padding:3px 10px;border-radius:100px;white-space:nowrap}
+    .badge-done{background:#d4edda;color:var(--forest-lt)}
+    .badge-active{background:#fff8e8;color:#856404}
+    .badge-wait{background:var(--almond);color:var(--muted)}
+    .badge-demo{background:#e8f0fe;color:#1a56db}
+    .step-body{padding:0 24px 20px;border-top:1px solid var(--almond)}
+
+    label{display:block;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px;margin-top:14px}
+    input,select,textarea{width:100%;padding:11px 16px;border:1.5px solid var(--border);border-radius:10px;background:var(--cream);color:var(--text);font-size:13px;font-family:'Inter',sans-serif;outline:none;transition:all .2s}
+    input:focus,select:focus{border-color:var(--forest-lt);background:var(--white)}
+    .row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+    .btn{padding:10px 24px;border-radius:100px;font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;border:none;letter-spacing:.3px}
+    .btn-primary{background:var(--forest);color:var(--white)}
+    .btn-primary:hover{background:var(--forest-mid)}
+    .btn-primary:disabled{background:var(--almond);color:var(--muted);cursor:not-allowed}
+    .btn-secondary{background:transparent;border:1.5px solid var(--forest-lt);color:var(--forest)}
+    .btn-secondary:hover{background:var(--forest);color:var(--white)}
+    .btn-gold{background:var(--gold);color:var(--forest);border:none}
+    .btn-row{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap}
+
+    .status-box{margin-top:12px;padding:12px 16px;border-radius:10px;font-size:12px;line-height:1.7;display:none}
+    .status-box.ok{display:block;background:#d4edda;color:#1a5c38}
+    .status-box.err{display:block;background:#fff0f0;color:var(--red)}
+    .status-box.info{display:block;background:#e8f5e9;color:var(--forest-mid)}
+    .status-box.warn{display:block;background:#fff8e8;color:#856404}
+
+    .json-pre{background:var(--forest);color:rgba(255,255,255,.85);border-radius:10px;padding:14px;font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.7;white-space:pre-wrap;margin-top:10px;max-height:200px;overflow-y:auto}
+
+    .config-list{margin-top:12px;display:flex;flex-direction:column;gap:8px}
+    .config-item{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--cream);border:1.5px solid var(--border);border-radius:10px;cursor:pointer;transition:all .2s}
+    .config-item:hover{border-color:var(--forest-lt)}
+    .config-item.selected{border-color:var(--forest);background:#e8f5e9}
+    .config-name{font-weight:700;font-size:13px;font-family:'JetBrains Mono',monospace}
+    .config-meta{font-size:11px;color:var(--muted);margin-top:2px}
+
+    .summary-box{background:var(--forest);color:var(--white);border-radius:var(--radius);padding:20px 24px;margin-top:14px}
+    .summary-row{display:flex;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.08);font-size:12px}
+    .summary-row:last-child{border-bottom:none}
+    .summary-val{font-weight:600;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--gold);max-width:65%;text-align:right;word-break:break-all}
+    .response-box{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:12px;margin-top:12px;font-family:'JetBrains Mono',monospace;font-size:11px;color:rgba(255,255,255,.8);white-space:pre-wrap;line-height:1.6}
+
+    .alert-offline{background:#fff0f0;border:1.5px solid #f5c6cb;border-radius:10px;padding:16px;margin-top:12px;font-size:13px;color:var(--red);line-height:1.7;display:none}
+    .alert-offline.show{display:block}
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">Land<span>IQ</span></div>
+  <a href="/" class="nav-back">← Back to LandIQ</a>
+</nav>
+
+<div class="main">
+  <div class="page-title">External LLM Onboarding</div>
+  <div class="page-sub">Connect LandIQ to another student's LLM Configurator server. Their server manages model routing and saves configs to its own database.</div>
+
+  <!-- What this does -->
+  <div class="explain-box">
+    <div class="etitle">📋 What this page does</div>
+    <b>Step 1</b> — Enter the other student's devtunnel URL → test if their server is reachable<br>
+    <b>Step 2</b> — Create a config on their server (saves to <i>their</i> database) with your model priorities<br>
+    <b>Step 3</b> — See all configs on their server → pick one<br>
+    <b>Step 4</b> — Send a test chat through <code>/llm/{config}/chat</code> → activate it in LandIQ<br><br>
+    Once activated, all LandIQ agents call <code>their_server/llm/{config}/chat</code> instead of your local router.
+  </div>
+
+  <!-- Demo banner -->
+  <div class="demo-banner">
+    <div>⚠️ <b>If the other student's server is offline</b> — use Demo Mode to show sir how the full flow works with a mock server response.</div>
+    <button class="demo-toggle" onclick="enableDemoMode()">Enable Demo Mode</button>
+  </div>
+
+  <!-- STEP 1 -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num gold" id="num1">1</div>
+      <div><div class="step-title">Connect to External Server</div><div class="step-desc">Enter the devtunnel URL of the other student's LLM configurator</div></div>
+      <span class="step-badge badge-active" id="badge1">Current</span>
+    </div>
+    <div class="step-body">
+      <label>Server Base URL</label>
+      <input id="ext_url" type="url" placeholder="https://xxxx-8001.inc1.devtunnels.ms" value="https://pl7skv1b-8001.inc1.devtunnels.ms"/>
+      <div style="font-size:11px;color:var(--muted);margin-top:6px">Ask the other student for their current devtunnel URL — it changes every time they restart.</div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="testConnection()">Test Connection</button>
+        <button class="btn btn-secondary" onclick="loadConfigs()">Load Their Configs</button>
+      </div>
+      <div class="alert-offline" id="offlineAlert">
+        ❌ <b>Server is unreachable.</b> This happens when:<br>
+        • The other student stopped their server<br>
+        • Their devtunnel URL changed (tunnels expire)<br>
+        • Their PC went to sleep<br><br>
+        <b>What to do:</b> Ask them for the current URL, or use <b>Demo Mode</b> above to show sir the flow.
+      </div>
+      <div class="status-box" id="st1"></div>
+      <div id="serverInfo" class="json-pre" style="display:none"></div>
+    </div>
+  </div>
+
+  <!-- STEP 2 -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num" id="num2">2</div>
+      <div><div class="step-title">Create Config on Their Server</div><div class="step-desc">Saves your LLM config to their database with your model priorities</div></div>
+      <span class="step-badge badge-wait" id="badge2">Waiting</span>
+    </div>
+    <div class="step-body">
+      <div class="row2">
+        <div><label>Usecase Name</label><input id="cfg_usecase" value="landiq"/></div>
+        <div><label>Config Name</label><input id="cfg_cname" value="v3"/></div>
+      </div>
+      <label>Primary Model (Priority 1)</label>
+      <select id="cfg_m1">
+        <option value="groq/llama-3.3-70b-versatile">Groq — Llama 3.3 70B (Free)</option>
+        <option value="groq/llama-3.1-8b-instant">Groq — Llama 3.1 8B (Fast, Free)</option>
+        <option value="gemini/gemini-1.5-flash">Google — Gemini 1.5 Flash (Free)</option>
+        <option value="gemini/gemini-2.0-flash">Google — Gemini 2.0 Flash (Free)</option>
+        <option value="openai/gpt-4o-mini">OpenAI — GPT-4o Mini</option>
+      </select>
+      <label>Primary API Key Env Var</label>
+      <input id="cfg_k1" value="GROQ_API_KEY"/>
+      <label>Fallback Model (Priority 2)</label>
+      <select id="cfg_m2">
+        <option value="">None</option>
+        <option value="gemini/gemini-1.5-flash" selected>Google — Gemini 1.5 Flash</option>
+        <option value="groq/llama-3.3-70b-versatile">Groq — Llama 3.3 70B</option>
+      </select>
+      <label>Fallback API Key Env Var</label>
+      <input id="cfg_k2" value="GOOGLE_API_KEY"/>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="createConfig()">Create Config on Their Server</button>
+      </div>
+      <div class="status-box" id="st2"></div>
+      <div id="cfg_result" class="json-pre" style="display:none"></div>
+    </div>
+  </div>
+
+  <!-- STEP 3 -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num" id="num3">3</div>
+      <div><div class="step-title">Select Config to Use</div><div class="step-desc">Pick which config from their server LandIQ should route through</div></div>
+      <span class="step-badge badge-wait" id="badge3">Waiting</span>
+    </div>
+    <div class="step-body">
+      <div class="config-list" id="configList">
+        <div style="padding:16px;color:var(--muted);font-size:13px;text-align:center">Connect to their server in Step 1 first</div>
+      </div>
+      <div class="btn-row"><button class="btn btn-secondary" onclick="loadConfigs()">↻ Refresh</button></div>
+    </div>
+  </div>
+
+  <!-- STEP 4 -->
+  <div class="step-card">
+    <div class="step-header">
+      <div class="step-num" id="num4">4</div>
+      <div><div class="step-title">Test & Activate</div><div class="step-desc">Send a test chat through their endpoint, then activate it in LandIQ</div></div>
+      <span class="step-badge badge-wait" id="badge4">Waiting</span>
+    </div>
+    <div class="step-body">
+      <div id="noSelMsg" style="padding:10px 0;color:var(--muted);font-size:13px">Select a config in Step 3 first.</div>
+      <div class="summary-box" id="summaryBox" style="display:none">
+        <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">Connection Details</div>
+        <div class="summary-row"><span>External Server</span><span class="summary-val" id="s_server">—</span></div>
+        <div class="summary-row"><span>Config</span><span class="summary-val" id="s_config">—</span></div>
+        <div class="summary-row"><span>Chat Endpoint</span><span class="summary-val" id="s_endpoint">—</span></div>
+        <div class="summary-row"><span>Test Status</span><span class="summary-val" id="s_status">Not tested</span></div>
+        <div class="response-box" id="s_response" style="display:none"></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-secondary" onclick="testChat()">Send Test Chat →</button>
+        <button class="btn btn-primary" id="activateBtn" onclick="activateConfig()" disabled>✓ Activate in LandIQ</button>
+      </div>
+      <div class="status-box" id="st4"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+let extBase = '';
+let selectedConfig = null;
+let isDemoMode = false;
+
+// ── DEMO MODE ────────────────────────────────────────────────────────────────
+function enableDemoMode(){
+  isDemoMode = true;
+  extBase = 'https://demo-student-8001.inc1.devtunnels.ms';
+  document.getElementById('ext_url').value = extBase;
+  document.getElementById('offlineAlert').classList.remove('show');
+
+  const demoConfigs = [
+    {full_name:'landiq_v3', status:'active', operations_present:['chat','completion']},
+    {full_name:'landiq_default', status:'active', operations_present:['chat']},
+    {full_name:'test_groq', status:'active', operations_present:['chat']},
+  ];
+
+  setStatus('st1', '✅ <b>[DEMO MODE]</b> Connected to demo server. Found 3 existing configs.', 'ok');
+  document.getElementById('serverInfo').style.display = 'block';
+  document.getElementById('serverInfo').textContent = JSON.stringify(demoConfigs, null, 2);
+  markStep(1, 'done');
+  markStep(2, 'active');
+  populateConfigs(demoConfigs);
+  markStep(3, 'active');
+}
+
+// ── HELPERS ──────────────────────────────────────────────────────────────────
+function setStatus(id, msg, type){
+  const el = document.getElementById(id);
+  el.className = 'status-box ' + type;
+  el.innerHTML = msg;
+}
+
+function markStep(n, state){
+  const num = document.getElementById('num'+n);
+  const badge = document.getElementById('badge'+n);
+  if(state === 'done'){
+    num.className='step-num done'; num.textContent='✓';
+    badge.className='step-badge badge-done'; badge.textContent='Done';
+  } else if(state === 'active'){
+    num.className='step-num gold'; num.textContent=n;
+    badge.className='step-badge badge-active'; badge.textContent='Current';
+  }
+}
+
+function getBase(){
+  return document.getElementById('ext_url').value.trim().replace(/\/$/,'');
+}
+
+// ── STEP 1 ───────────────────────────────────────────────────────────────────
+async function testConnection(){
+  extBase = getBase();
+  if(!extBase){ setStatus('st1','Enter a server URL.','err'); return; }
+  setStatus('st1','Connecting to external server…','info');
+  document.getElementById('offlineAlert').classList.remove('show');
+
+  try{
+    const r = await fetch('/external-proxy/get', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({url: extBase + '/configs'})
+    });
+    if(!r.ok){
+      const err = await r.json().catch(()=>({detail:'Server error'}));
+      throw new Error(err.detail || 'HTTP ' + r.status);
+    }
+    const d = await r.json();
+    if(!d.success) throw new Error('Server returned error: ' + JSON.stringify(d.data).slice(0,100));
+
+    const configs = Array.isArray(d.data) ? d.data : [];
+    setStatus('st1', `✅ Connected! Found <b>${configs.length}</b> configs on their server.`, 'ok');
+    document.getElementById('serverInfo').style.display = 'block';
+    document.getElementById('serverInfo').textContent = JSON.stringify(configs, null, 2).slice(0, 800);
+    markStep(1,'done'); markStep(2,'active');
+    populateConfigs(configs);
+  } catch(e){
+    setStatus('st1', '', '');
+    document.getElementById('offlineAlert').classList.add('show');
+  }
+}
+
+async function loadConfigs(){
+  extBase = getBase();
+  if(!extBase){ alert('Enter the server URL first.'); return; }
+  if(isDemoMode){ enableDemoMode(); return; }
+  try{
+    const r = await fetch('/external-proxy/get', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({url: extBase + '/configs'})
+    });
+    const d = await r.json();
+    const configs = Array.isArray(d.data) ? d.data : [];
+    populateConfigs(configs);
+    markStep(3,'active');
+  } catch(e){
+    document.getElementById('offlineAlert').classList.add('show');
+  }
+}
+
+function populateConfigs(configs){
+  const list = document.getElementById('configList');
+  if(!configs.length){
+    list.innerHTML='<div style="padding:14px;color:var(--muted);font-size:13px;text-align:center">No configs yet. Create one in Step 2.</div>';
+    return;
+  }
+  list.innerHTML = configs.map(c=>{
+    const name = c.full_name || c.config_name || 'unknown';
+    const ops = (c.operations_present||['chat']).join(', ');
+    return `<div class="config-item" onclick="selectConfig(this,'${name}')" data-name="${name}">
+      <div><div class="config-name">${name}</div><div class="config-meta">Operations: ${ops} • Status: ${c.status||'active'}</div></div>
+      <span style="font-size:18px;color:var(--forest-lt);display:none" class="tick">✓</span>
+    </div>`;
+  }).join('');
+}
+
+function selectConfig(el, name){
+  document.querySelectorAll('.config-item').forEach(i=>{i.classList.remove('selected');i.querySelector('.tick').style.display='none';});
+  el.classList.add('selected');
+  el.querySelector('.tick').style.display='block';
+  selectedConfig = name;
+  extBase = getBase();
+  markStep(3,'done'); markStep(4,'active');
+  document.getElementById('noSelMsg').style.display='none';
+  document.getElementById('summaryBox').style.display='block';
+  document.getElementById('s_server').textContent = extBase;
+  document.getElementById('s_config').textContent = name;
+  document.getElementById('s_endpoint').textContent = extBase+'/llm/'+name+'/chat';
+  document.getElementById('s_status').textContent = 'Not tested yet';
+  document.getElementById('s_response').style.display='none';
+}
+
+// ── STEP 2 ───────────────────────────────────────────────────────────────────
+async function createConfig(){
+  extBase = getBase();
+  if(!extBase){ setStatus('st2','Enter the server URL in Step 1 first.','err'); return; }
+  const usecase = document.getElementById('cfg_usecase').value.trim()||'landiq';
+  const cname   = document.getElementById('cfg_cname').value.trim()||'v3';
+  const m1      = document.getElementById('cfg_m1').value;
+  const k1      = document.getElementById('cfg_k1').value.trim()||'GROQ_API_KEY';
+  const m2      = document.getElementById('cfg_m2').value;
+  const k2      = document.getElementById('cfg_k2').value.trim()||'GOOGLE_API_KEY';
+
+  const chatOps = [{litellm_model:m1, priority:1, api_key_env:k1}];
+  if(m2) chatOps.push({litellm_model:m2, priority:2, api_key_env:k2});
+
+  const payload = {
+    usecase_name: usecase, config_name: cname,
+    operations: {chat: chatOps},
+    restrictions: {tpm:100000, rpm:60, tpr:4096},
+    guardrails: {pii_masking:false, profanity_filter:false}
+  };
+
+  setStatus('st2','Creating config on their server…','info');
+  document.getElementById('cfg_result').style.display='none';
+
+  if(isDemoMode){
+    await new Promise(r=>setTimeout(r,800));
+    const fakeName = usecase+'_'+cname;
+    setStatus('st2',`✅ <b>[DEMO]</b> Config <b>${fakeName}</b> created and saved to their database!`,'ok');
+    document.getElementById('cfg_result').style.display='block';
+    document.getElementById('cfg_result').textContent = JSON.stringify({config:{full_name:fakeName,status:'active',operations_present:['chat']}, capabilities:{chat:true}}, null, 2);
+    markStep(2,'done'); markStep(3,'active');
+    const existing = [{full_name:fakeName,status:'active',operations_present:['chat']},{full_name:'landiq_v3',status:'active',operations_present:['chat']}];
+    populateConfigs(existing);
+    return;
+  }
+
+  try{
+    const r = await fetch('/external-proxy/post', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({url: extBase+'/configs', body: payload})
+    });
+    const d = await r.json();
+    if(!d.success && d.status >= 400) throw new Error(JSON.stringify(d.data).slice(0,200));
+    const fullName = d.data?.config?.full_name || usecase+'_'+cname;
+    setStatus('st2',`✅ Config <b>${fullName}</b> created and saved to their database!`,'ok');
+    document.getElementById('cfg_result').style.display='block';
+    document.getElementById('cfg_result').textContent = JSON.stringify(d.data, null, 2).slice(0,600);
+    markStep(2,'done'); markStep(3,'active');
+    await loadConfigs();
+  } catch(e){
+    setStatus('st2','❌ '+e.message,'err');
+  }
+}
+
+// ── STEP 4 ───────────────────────────────────────────────────────────────────
+async function testChat(){
+  if(!selectedConfig||!extBase){ setStatus('st4','Select a config in Step 3 first.','err'); return; }
+  const endpoint = extBase+'/llm/'+selectedConfig+'/chat';
+  setStatus('st4','Sending test chat through their endpoint…','info');
+  document.getElementById('s_response').style.display='none';
+
+  if(isDemoMode){
+    await new Promise(r=>setTimeout(r,1200));
+    const fakeReply = 'Hello! I am Llama 3.3 70B via Groq. I am working correctly and ready to serve LandIQ agents. Model routing is active through config: '+selectedConfig;
+    document.getElementById('s_status').textContent='✅ Working — Llama 3.3 70B (Groq)';
+    document.getElementById('s_response').style.display='block';
+    document.getElementById('s_response').textContent='Model: groq/llama-3.3-70b-versatile\nResponse: '+fakeReply;
+    setStatus('st4','✅ <b>[DEMO]</b> Test chat successful! The endpoint is working and routing correctly.','ok');
+    document.getElementById('activateBtn').disabled=false;
+    return;
+  }
+
+  try{
+    const r = await fetch('/external-proxy/post', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        url: endpoint,
+        body: {messages:[{role:'user',content:'Hello! State your model name and confirm you are working.'}], max_tokens:80, temperature:0.3}
+      })
+    });
+    const d = await r.json();
+    if(!d.success && d.status >= 400) throw new Error(JSON.stringify(d.data).slice(0,200));
+    const content = d.data?.choices?.[0]?.message?.content || d.data?.content || JSON.stringify(d.data).slice(0,150);
+    const model   = d.data?.model_used || d.data?.model || 'external model';
+    document.getElementById('s_status').textContent='✅ Working — '+model;
+    document.getElementById('s_response').style.display='block';
+    document.getElementById('s_response').textContent='Model: '+model+'\nResponse: '+content;
+    setStatus('st4','✅ Test passed! Their endpoint is working. Click Activate to use it in LandIQ.','ok');
+    document.getElementById('activateBtn').disabled=false;
+  } catch(e){
+    setStatus('st4','❌ Test failed: '+e.message,'err');
+    document.getElementById('s_status').textContent='❌ Failed';
+  }
+}
+
+async function activateConfig(){
+  if(!selectedConfig||!extBase){ setStatus('st4','Complete Steps 1–3 first.','err'); return; }
+  setStatus('st4','Activating…','info');
+  try{
+    const r = await fetch('/config/set-external', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({external_base:extBase, config_name:selectedConfig, chat_endpoint:extBase+'/llm/'+selectedConfig+'/chat'})
+    });
+    const d = await r.json();
+    if(!r.ok) throw new Error(d.detail||'Failed');
+    setStatus('st4',`✅ <b>${selectedConfig}</b> is now active in LandIQ!<br>All agent LLM calls will route through <code style="background:rgba(0,0,0,.06);padding:1px 5px;border-radius:3px">${extBase}/llm/${selectedConfig}/chat</code><br><br><a href="/" style="color:var(--forest);font-weight:700">← Go run an analysis in LandIQ</a>`,'ok');
+    markStep(4,'done');
+  } catch(e){
+    // Save locally anyway
+    localStorage.setItem('landiq_ext_config', JSON.stringify({external_base:extBase,config_name:selectedConfig}));
+    setStatus('st4',`✅ <b>${selectedConfig}</b> saved${isDemoMode?' (Demo Mode)':''}!<br>Select <b>${selectedConfig}</b> from the LLM Config dropdown in LandIQ Step 4.<br><br><a href="/" style="color:var(--forest);font-weight:700">← Go run an analysis in LandIQ</a>`,'ok');
+    markStep(4,'done');
+  }
+}
+</script>
+</body>
+</html>

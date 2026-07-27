@@ -1,0 +1,1368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>LandIQ — Know Your Land Before You Spend a Rupee</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <style>
+    :root{--ink:#081209;--forest:#0e2415;--moss:#1a3a24;--sage:#2d6042;--leaf:#4a8c5c;--cream:#f6f3ea;--parch:#eee9dc;--stone:#d9d1bd;--gold:#c9a24b;--gold-lt:#ecd28a;--white:#ffffff;--muted:#6b7c6e;--red:#b03030;}
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    html{scroll-behavior:smooth;}
+    body{background:var(--cream);color:var(--ink);font-family:'Inter',sans-serif;overflow-x:hidden;}
+    ::selection{background:var(--gold);color:var(--forest);}
+    .reveal{opacity:0;transform:translateY(28px);transition:opacity .9s cubic-bezier(.16,1,.3,1),transform .9s cubic-bezier(.16,1,.3,1);}
+    .reveal.in{opacity:1;transform:none;}
+    .reveal-d1{transition-delay:.12s;}.reveal-d2{transition-delay:.24s;}.reveal-d3{transition-delay:.36s;}
+    @media(prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none;transition:none;}*{animation-duration:.01ms!important;animation-iteration-count:1!important;}}
+    nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:0 48px;height:68px;display:flex;align-items:center;justify-content:space-between;background:rgba(8,18,9,.7);backdrop-filter:blur(20px) saturate(1.4);border-bottom:1px solid rgba(236,210,138,.1);transition:background .3s;}
+    .nav-logo{font-family:'Cormorant Garamond',serif;font-size:27px;font-weight:600;color:var(--white);letter-spacing:-.5px;}
+    .nav-logo span{color:var(--gold);}
+    .nav-links{display:flex;gap:34px;}
+    .nav-link{font-size:12px;font-weight:500;color:rgba(255,255,255,.55);text-decoration:none;letter-spacing:1.2px;text-transform:uppercase;transition:color .2s;position:relative;}
+    .nav-link::after{content:'';position:absolute;left:0;bottom:-6px;width:0;height:1px;background:var(--gold);transition:width .3s;}
+    .nav-link:hover{color:var(--gold-lt);}.nav-link:hover::after{width:100%;}
+    .nav-cta{background:var(--gold);color:var(--forest);border:none;border-radius:100px;padding:11px 26px;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.3px;transition:all .25s;}
+    .nav-cta:hover{background:var(--gold-lt);transform:translateY(-1px);box-shadow:0 8px 24px rgba(201,162,75,.35);}
+    .hero{position:relative;height:100vh;min-height:700px;display:flex;align-items:flex-end;padding-bottom:96px;background:var(--forest);overflow:hidden;}
+    .hero-img{position:absolute;inset:-4%;background-image:url('https://images.unsplash.com/photo-1501696461415-6bd6660c6742?w=2000&q=85');background-size:cover;background-position:center 40%;opacity:.6;animation:kenburns 24s ease-in-out infinite alternate;}
+    @keyframes kenburns{from{transform:scale(1.06) translateY(0);}to{transform:scale(1.0) translateY(-10px);}}
+    .hero-gradient{position:absolute;inset:0;background:radial-gradient(ellipse 80% 60% at 20% 100%,rgba(8,18,9,.9),transparent 65%),linear-gradient(to top,rgba(8,18,9,.97) 0%,rgba(8,18,9,.45) 45%,rgba(8,18,9,.15) 100%);}
+    .hero-grain{position:absolute;inset:0;opacity:.05;pointer-events:none;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 240 240' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");}
+    .hero-content{position:relative;z-index:2;max-width:1200px;margin:0 auto;width:100%;padding:0 48px;}
+    .hero-eyebrow{font-size:11px;font-weight:600;color:var(--gold);text-transform:uppercase;letter-spacing:3px;margin-bottom:22px;display:flex;align-items:center;gap:12px;opacity:0;animation:fadeup 1s .2s cubic-bezier(.16,1,.3,1) forwards;}
+    .hero-eyebrow::before{content:'';width:40px;height:1px;background:linear-gradient(90deg,var(--gold),transparent);}
+    .hero h1{font-family:'Cormorant Garamond',serif;font-size:clamp(50px,7.4vw,96px);line-height:.98;font-weight:600;color:var(--white);margin-bottom:30px;letter-spacing:-2px;}
+    .hero h1 .hl{display:block;opacity:0;animation:fadeup 1s cubic-bezier(.16,1,.3,1) forwards;}
+    .hero h1 .hl:nth-child(1){animation-delay:.35s}.hero h1 .hl:nth-child(2){animation-delay:.5s}.hero h1 .hl:nth-child(3){animation-delay:.65s}
+    .hero h1 em{font-style:italic;color:var(--gold-lt);}
+    .hero-sub{font-size:17px;color:rgba(255,255,255,.68);max-width:560px;line-height:1.8;margin-bottom:42px;font-weight:300;opacity:0;animation:fadeup 1s .85s cubic-bezier(.16,1,.3,1) forwards;}
+    .hero-actions{display:flex;gap:14px;align-items:center;flex-wrap:wrap;opacity:0;animation:fadeup 1s 1s cubic-bezier(.16,1,.3,1) forwards;}
+    @keyframes fadeup{from{opacity:0;transform:translateY(26px);}to{opacity:1;transform:none;}}
+    .btn-hero{background:var(--gold);color:var(--forest);border:none;border-radius:100px;padding:16px 36px;font-size:14px;font-weight:700;cursor:pointer;letter-spacing:.3px;transition:all .25s;}
+    .btn-hero:hover{background:var(--gold-lt);transform:translateY(-2px);box-shadow:0 16px 48px rgba(201,162,75,.35);}
+    .btn-hero-ghost{background:rgba(255,255,255,.04);color:rgba(255,255,255,.85);border:1px solid rgba(255,255,255,.22);border-radius:100px;padding:16px 36px;font-size:14px;font-weight:500;cursor:pointer;transition:all .25s;backdrop-filter:blur(6px);}
+    .btn-hero-ghost:hover{background:rgba(255,255,255,.1);border-color:var(--gold);color:var(--gold-lt);}
+    .hero-scroll{position:absolute;bottom:30px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:8px;color:rgba(255,255,255,.35);font-size:10px;letter-spacing:2.5px;text-transform:uppercase;animation:bounce 2.8s ease-in-out infinite;z-index:2;}
+    .hero-scroll::after{content:'';width:1px;height:44px;background:linear-gradient(to bottom,var(--gold),transparent);}
+    @keyframes bounce{0%,100%{transform:translateX(-50%) translateY(0);}50%{transform:translateX(-50%) translateY(7px);}}
+    .stats-bar{background:var(--forest);border-bottom:1px solid rgba(236,210,138,.08);padding:0 48px;}
+    .stats-inner{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr);}
+    .stat-cell{padding:34px 24px;text-align:center;border-right:1px solid rgba(236,210,138,.08);position:relative;overflow:hidden;}
+    .stat-cell:last-child{border-right:none;}
+    .stat-num{font-family:'Cormorant Garamond',serif;font-size:42px;font-weight:600;color:var(--gold-lt);display:block;line-height:1;}
+    .stat-lbl{font-size:10px;color:rgba(255,255,255,.42);text-transform:uppercase;letter-spacing:2px;margin-top:8px;}
+    section{padding:110px 48px;}
+    .section-inner{max-width:1200px;margin:0 auto;}
+    .eyebrow{font-size:10px;font-weight:700;color:var(--sage);text-transform:uppercase;letter-spacing:3px;margin-bottom:16px;display:flex;align-items:center;gap:10px;}
+    .eyebrow::before{content:'';width:26px;height:1px;background:var(--gold);}
+    .section-title{font-family:'Cormorant Garamond',serif;font-size:clamp(34px,4.2vw,56px);font-weight:600;line-height:1.08;letter-spacing:-1px;margin-bottom:18px;}
+    .section-sub{font-size:16px;color:var(--muted);line-height:1.85;max-width:580px;font-weight:300;}
+    .orch-live{background:var(--forest);position:relative;overflow:hidden;}
+    .orch-live::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 60% 50% at 50% 0%,rgba(201,162,75,.07),transparent 70%);}
+    .orch-live .section-inner{position:relative;z-index:2;}
+    .orch-diagram{max-width:760px;margin:64px auto 0;position:relative;}
+    .orch-beam{position:absolute;left:50%;top:0;bottom:0;width:2px;transform:translateX(-50%);background:linear-gradient(to bottom,transparent,rgba(201,162,75,.25) 10%,rgba(201,162,75,.25) 90%,transparent);}
+    .orch-pulse{position:absolute;left:50%;transform:translateX(-50%);width:8px;height:8px;border-radius:50%;background:var(--gold-lt);box-shadow:0 0 16px 4px rgba(236,210,138,.5);animation:beamdrop 6s linear infinite;}
+    @keyframes beamdrop{0%{top:0;opacity:0;}6%{opacity:1;}94%{opacity:1;}100%{top:100%;opacity:0;}}
+    .olayer{position:relative;z-index:2;background:rgba(255,255,255,.03);border:1px solid rgba(236,210,138,.12);border-radius:18px;padding:24px 28px;margin-bottom:34px;backdrop-filter:blur(8px);display:flex;align-items:center;gap:22px;transition:border-color .4s,background .4s;}
+    .olayer.glow{border-color:rgba(236,210,138,.55);background:rgba(201,162,75,.06);}
+    .olayer-num{font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;letter-spacing:2px;color:var(--gold);width:72px;flex-shrink:0;}
+    .olayer-role{font-size:11px;color:rgba(255,255,255,.4);margin-top:4px;letter-spacing:.3px;}
+    .olayer-pills{display:flex;gap:8px;flex-wrap:wrap;}
+    .opill{border-radius:100px;padding:7px 17px;font-size:12px;font-weight:600;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);color:rgba(255,255,255,.85);transition:all .4s;}
+    .olayer.glow .opill{background:rgba(201,162,75,.16);border-color:rgba(236,210,138,.4);color:var(--gold-lt);}
+    .orch-caption{text-align:center;margin-top:8px;font-family:'JetBrains Mono',monospace;font-size:11px;color:rgba(236,210,138,.6);letter-spacing:1px;}
+    .how-section{background:var(--cream);}
+    .how-step{display:grid;grid-template-columns:1fr 1fr;gap:84px;align-items:center;margin-bottom:110px;}
+    .how-step:last-child{margin-bottom:0;}
+    .how-step.reverse{direction:rtl;}.how-step.reverse>*{direction:ltr;}
+    .how-photo{position:relative;border-radius:22px;overflow:hidden;height:440px;box-shadow:0 24px 64px rgba(14,36,21,.16);}
+    .how-photo img{width:100%;height:100%;object-fit:cover;display:block;transition:transform .8s cubic-bezier(.16,1,.3,1);}
+    .how-photo:hover img{transform:scale(1.05);}
+    .how-photo::after{content:'';position:absolute;inset:0;background:linear-gradient(155deg,rgba(14,36,21,.22),transparent 55%);}
+    .how-photo .tag{position:absolute;bottom:18px;left:18px;z-index:2;background:rgba(8,18,9,.72);backdrop-filter:blur(10px);border:1px solid rgba(236,210,138,.25);color:var(--gold-lt);font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1.5px;padding:8px 16px;border-radius:100px;}
+    .how-num{font-family:'Cormorant Garamond',serif;font-size:84px;font-weight:700;line-height:1;margin-bottom:18px;background:linear-gradient(180deg,var(--stone),transparent);-webkit-background-clip:text;background-clip:text;color:transparent;}
+    .how-title{font-family:'Cormorant Garamond',serif;font-size:36px;font-weight:600;line-height:1.18;margin-bottom:18px;color:var(--ink);}
+    .how-desc{font-size:15px;color:var(--muted);line-height:1.9;margin-bottom:26px;font-weight:300;}
+    .how-points{list-style:none;display:flex;flex-direction:column;gap:12px;}
+    .how-points li{display:flex;align-items:flex-start;gap:12px;font-size:14px;color:var(--ink);line-height:1.55;}
+    .how-points li::before{content:'—';color:var(--gold);font-weight:700;flex-shrink:0;}
+    .photo-break{position:relative;height:540px;display:flex;align-items:center;justify-content:center;overflow:hidden;}
+    .photo-break-img{position:absolute;inset:-6%;background-size:cover;background-position:center;}
+    .photo-break-overlay{position:absolute;inset:0;background:rgba(8,18,9,.74);}
+    .photo-break-content{position:relative;z-index:2;text-align:center;padding:0 48px;max-width:860px;}
+    .photo-break-quote{font-family:'Cormorant Garamond',serif;font-size:clamp(28px,4vw,54px);font-style:italic;font-weight:400;color:var(--white);line-height:1.32;margin-bottom:22px;}
+    .photo-break-attr{font-size:12px;color:var(--gold);letter-spacing:2.5px;text-transform:uppercase;}
+    .photo-break-attr::before{content:'· ';}.photo-break-attr::after{content:' ·';}
+    .trust-section{background:var(--forest);position:relative;overflow:hidden;}
+    .trust-section::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 50% 40% at 80% 10%,rgba(201,162,75,.06),transparent 70%);}
+    .trust-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:64px;position:relative;z-index:2;}
+    .trust-card{background:rgba(255,255,255,.035);border:1px solid rgba(236,210,138,.1);border-radius:18px;padding:38px 32px;transition:all .35s;}
+    .trust-card:hover{background:rgba(255,255,255,.06);border-color:rgba(236,210,138,.3);transform:translateY(-4px);}
+    .trust-icon{font-size:26px;margin-bottom:20px;display:block;}
+    .trust-title{font-family:'Cormorant Garamond',serif;font-size:23px;font-weight:600;color:var(--white);margin-bottom:12px;}
+    .trust-desc{font-size:13.5px;color:rgba(255,255,255,.52);line-height:1.8;font-weight:300;}
+    .trust-metric{font-family:'Cormorant Garamond',serif;font-size:34px;font-weight:700;color:var(--gold-lt);margin-top:18px;}
+    .accuracy-section{position:relative;padding:120px 48px;overflow:hidden;}
+    .accuracy-bg{position:absolute;inset:0;background-image:url('https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=1600&q=80');background-size:cover;background-position:center;opacity:.1;}
+    .accuracy-inner{position:relative;z-index:2;max-width:1200px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:84px;align-items:center;}
+    .accuracy-metrics{display:flex;flex-direction:column;gap:22px;}
+    .metric-row{display:flex;flex-direction:column;gap:9px;}
+    .metric-label{display:flex;justify-content:space-between;align-items:center;}
+    .metric-name{font-size:14px;font-weight:600;color:var(--ink);}
+    .metric-pct{font-size:13px;font-weight:700;color:var(--sage);font-family:'JetBrains Mono',monospace;}
+    .metric-track{height:5px;background:var(--stone);border-radius:4px;overflow:hidden;}
+    .metric-fill{height:100%;background:linear-gradient(90deg,var(--sage),var(--gold));border-radius:4px;transition:width 1.4s cubic-bezier(.16,1,.3,1);width:0;}
+    .accuracy-proof{margin-top:34px;display:flex;flex-direction:column;gap:14px;}
+    .proof-item{display:flex;align-items:flex-start;gap:15px;padding:18px 22px;background:rgba(255,255,255,.75);border:1px solid var(--stone);border-radius:14px;backdrop-filter:blur(10px);transition:all .3s;}
+    .proof-item:hover{transform:translateX(6px);border-color:var(--gold);}
+    .proof-icon{font-size:21px;flex-shrink:0;}
+    .proof-text{font-size:13.5px;color:var(--ink);line-height:1.6;}
+    .proof-text b{color:var(--forest);}
+    .output-section{background:var(--parch);}
+    .output-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:54px;}
+    .output-card{background:var(--white);border:1px solid var(--stone);border-radius:16px;padding:26px;transition:all .3s;}
+    .output-card:hover{box-shadow:0 16px 48px rgba(14,36,21,.12);transform:translateY(-4px);border-color:var(--gold);}
+    .output-card-label{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1.2px;margin-bottom:16px;}
+    .output-metric-big{font-family:'Cormorant Garamond',serif;font-size:44px;font-weight:700;color:var(--ink);line-height:1;}
+    .output-metric-unit{font-size:16px;color:var(--muted);font-weight:400;}
+    .output-progress{height:4px;background:var(--stone);border-radius:2px;margin:14px 0;overflow:hidden;}
+    .output-progress-fill{height:100%;border-radius:2px;}
+    .fill-green{background:var(--sage);width:87%;}.fill-gold{background:var(--gold);width:72%;}
+    .fill-blue{background:#4a7fa8;width:68%;}.fill-red{background:var(--red);width:22%;}
+    .fill-teal{background:#3a8a7a;width:91%;}.fill-purple{background:#6a5acd;width:80%;}
+    .output-desc{font-size:12px;color:var(--muted);line-height:1.65;margin-top:4px;}
+    .verdict-banner{grid-column:1/-1;background:linear-gradient(120deg,var(--forest),var(--moss));border:1px solid rgba(236,210,138,.2);border-radius:16px;padding:30px 34px;display:flex;align-items:center;gap:26px;}
+    .verdict-label{font-size:10px;font-weight:700;color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:2px;margin-bottom:8px;}
+    .verdict-text{font-family:'Cormorant Garamond',serif;font-size:27px;font-weight:600;color:var(--white);}
+    .verdict-chip{padding:8px 22px;background:var(--gold);color:var(--forest);border-radius:100px;font-size:12px;font-weight:800;letter-spacing:1px;text-transform:uppercase;white-space:nowrap;}
+    .verdict-conf{font-size:12px;color:rgba(255,255,255,.42);margin-top:8px;}
+    .agents-section{background:var(--cream);}
+    .agents-header{display:grid;grid-template-columns:1fr 1fr;gap:84px;align-items:end;margin-bottom:64px;}
+    .agents-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;}
+    .agent-card{background:var(--white);border:1px solid var(--stone);border-radius:16px;padding:30px 26px;cursor:pointer;transition:all .35s;position:relative;overflow:hidden;}
+    .agent-card::before{content:'';position:absolute;inset:0;background:linear-gradient(160deg,var(--forest),var(--moss));opacity:0;transition:opacity .35s;}
+    .agent-card:hover{transform:translateY(-5px);box-shadow:0 18px 44px rgba(14,36,21,.18);border-color:transparent;}
+    .agent-card:hover::before{opacity:1;}
+    .agent-card>*{position:relative;z-index:2;}
+    .agent-card:hover .agent-name{color:var(--gold-lt);}
+    .agent-card:hover .agent-desc{color:rgba(255,255,255,.6);}
+    .agent-icon{font-size:27px;margin-bottom:18px;display:block;}
+    .agent-name{font-family:'Cormorant Garamond',serif;font-size:19px;font-weight:600;color:var(--ink);margin-bottom:9px;transition:color .3s;}
+    .agent-desc{font-size:12px;color:var(--muted);line-height:1.65;transition:color .3s;}
+    .cta-section{position:relative;padding:160px 48px;display:flex;align-items:center;justify-content:center;overflow:hidden;text-align:center;}
+    .cta-bg{position:absolute;inset:-6%;background-image:url('https://images.unsplash.com/photo-1472214103451-9374bd1c798e?w=1800&q=85');background-size:cover;background-position:center 65%;animation:kenburns 26s ease-in-out infinite alternate;}
+    .cta-overlay{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(8,18,9,.88),rgba(8,18,9,.8));}
+    .cta-content{position:relative;z-index:2;max-width:700px;}
+    .cta-content h2{font-family:'Cormorant Garamond',serif;font-size:clamp(38px,5.4vw,72px);font-weight:600;color:var(--white);line-height:1.08;letter-spacing:-1.5px;margin-bottom:22px;}
+    .cta-content h2 em{font-style:italic;color:var(--gold-lt);}
+    .cta-content p{font-size:16px;color:rgba(255,255,255,.6);margin-bottom:44px;line-height:1.8;font-weight:300;}
+    footer{background:var(--ink);padding:44px 48px;display:flex;align-items:center;justify-content:space-between;border-top:1px solid rgba(236,210,138,.08);}
+    .footer-logo{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:600;color:var(--white);}
+    .footer-logo span{color:var(--gold);}
+    .footer-text{font-size:12px;color:rgba(255,255,255,.32);}
+    .form-section{background:var(--parch);}
+    .form-wrap{max-width:880px;margin:0 auto;}
+    .form-card{background:var(--white);border:1px solid var(--stone);border-radius:24px;overflow:hidden;box-shadow:0 12px 64px rgba(14,36,21,.1);}
+    .steps-nav{display:flex;background:var(--forest);}
+    .step-tab{flex:1;padding:22px 12px;text-align:center;font-size:10px;font-weight:700;color:rgba(255,255,255,.35);border-right:1px solid rgba(236,210,138,.07);cursor:pointer;transition:all .25s;letter-spacing:1.5px;text-transform:uppercase;position:relative;}
+    .step-tab::after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:var(--gold);transform:scaleX(0);transition:transform .3s;}
+    .step-tab:last-child{border-right:none;}
+    .step-tab.active{color:var(--gold-lt);background:rgba(236,210,138,.05);}
+    .step-tab.active::after{transform:scaleX(1);}
+    .step-tab .sn{display:block;font-family:'Cormorant Garamond',serif;font-size:23px;font-weight:700;color:rgba(255,255,255,.15);margin-bottom:3px;}
+    .step-tab.active .sn{color:var(--gold);}
+    .step-pane{display:none;padding:42px;}
+    .step-pane.active{display:block;animation:paneIn .4s cubic-bezier(.16,1,.3,1);}
+    @keyframes paneIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
+    .fg{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
+    .fg3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:16px;}
+    label{display:block;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:7px;}
+    input,select{width:100%;padding:13px 17px;border:1.5px solid var(--stone);border-radius:12px;background:var(--parch);color:var(--ink);font-size:14px;font-family:'Inter',sans-serif;outline:none;transition:all .25s;}
+    input:focus,select:focus{border-color:var(--sage);background:var(--white);box-shadow:0 0 0 4px rgba(74,140,92,.09);}
+    .hr{border:none;border-top:1px solid var(--stone);margin:26px 0;}
+    .tog-row{display:flex;align-items:center;justify-content:space-between;padding:13px 17px;background:var(--parch);border:1.5px solid var(--stone);border-radius:12px;margin-bottom:12px;}
+    .tog-lbl{font-size:13px;font-weight:500;}
+    .tog-sub{font-size:11px;color:var(--muted);margin-top:2px;}
+    .tog{position:relative;width:46px;height:25px;flex-shrink:0;}
+    .tog input{opacity:0;width:0;height:0;}
+    .tog-sl{position:absolute;cursor:pointer;inset:0;background:var(--stone);border-radius:25px;transition:.3s;}
+    .tog-sl::before{position:absolute;content:'';height:19px;width:19px;left:3px;bottom:3px;background:var(--white);border-radius:50%;transition:.3s;box-shadow:0 1px 5px rgba(0,0,0,.18);}
+    input:checked+.tog-sl{background:var(--sage);}
+    input:checked+.tog-sl::before{transform:translateX(21px);}
+    .agents-pick{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:10px;}
+    .ap-btn{padding:13px 10px;border:1.5px solid var(--stone);border-radius:12px;background:var(--parch);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;text-align:left;transition:all .22s;}
+    .ap-btn:hover{border-color:var(--sage);color:var(--forest);transform:translateY(-1px);}
+    .ap-btn.sel{background:var(--forest);color:var(--white);border-color:var(--forest);}
+    .ap-btn .ai{display:block;font-size:20px;margin-bottom:5px;}
+    .gr-opts{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:10px;}
+    .gr-btn{border:1.5px solid var(--stone);border-radius:12px;padding:15px 10px;cursor:pointer;text-align:center;background:var(--white);transition:all .22s;}
+    .gr-btn:hover{border-color:var(--sage);transform:translateY(-1px);}
+    .gr-btn.sel{border-color:var(--forest);background:var(--forest);color:var(--white);}
+    .gr-btn.sel .gr-lbl{color:var(--white);}.gr-btn.sel .gr-sub{color:rgba(255,255,255,.55);}
+    .gr-ico{font-size:22px;margin-bottom:6px;}
+    .gr-lbl{font-size:12px;font-weight:700;color:var(--ink);}
+    .gr-sub{font-size:10px;color:var(--muted);margin-top:2px;}
+    .gr-cfg{display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--stone);}
+    .gr-cfg.open{display:block;}
+    .gr-st{font-size:11px;padding:8px 12px;border-radius:8px;margin-top:8px;display:none;}
+    .gr-st.ok{display:block;background:#d4edda;color:var(--sage);}
+    .gr-st.err{display:block;background:#ffeaea;color:var(--red);}
+    .gr-st.info{display:block;background:#e8f5e9;color:var(--sage);}
+    .cfg-wrap{background:var(--parch);border:1.5px solid var(--stone);border-radius:14px;padding:15px 19px;margin-bottom:16px;}
+    .cfg-row{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+    .cfg-lbl{font-size:13px;color:var(--muted);}
+    .btn-cfg{padding:9px 22px;background:transparent;border:1.5px solid var(--sage);color:var(--forest);border-radius:100px;font-size:12px;font-weight:700;cursor:pointer;transition:all .22s;}
+    .btn-cfg:hover{background:var(--forest);color:var(--white);}
+    .cfg-pick{display:none;margin-top:12px;}
+    .cfg-pick.open{display:block;}
+    .cave-box{background:var(--parch);border:1.5px solid var(--stone);border-radius:14px;padding:15px 19px;margin-bottom:20px;}
+    .cave-hdr{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;}
+    .cave-ttl{font-size:13px;font-weight:700;}
+    .cave-sub{font-size:11px;color:var(--muted);margin-top:2px;}
+    .cave-ctrls{display:flex;align-items:center;gap:10px;}
+    .cave-sel{padding:7px 13px;border-radius:100px;border:1.5px solid var(--stone);background:var(--white);font-size:12px;color:var(--ink);width:auto;}
+    .cave-st{font-size:11px;color:var(--muted);margin-top:9px;padding-top:9px;border-top:1px solid var(--stone);}
+    .btn-analyse{width:100%;padding:17px;background:linear-gradient(120deg,var(--forest),var(--moss));color:var(--white);border:1px solid rgba(236,210,138,.25);border-radius:100px;font-size:15px;font-weight:700;cursor:pointer;letter-spacing:.3px;transition:all .25s;margin-top:8px;}
+    .btn-analyse:hover{transform:translateY(-2px);box-shadow:0 14px 40px rgba(14,36,21,.35);border-color:var(--gold);}
+    .btn-nav-row{display:flex;justify-content:space-between;align-items:center;margin-top:20px;}
+    .btn-back{padding:11px 26px;border:1.5px solid var(--stone);border-radius:100px;background:var(--white);font-size:13px;font-weight:600;cursor:pointer;color:var(--ink);transition:all .22s;}
+    .btn-back:hover{border-color:var(--sage);}
+    .btn-next{padding:13px 34px;background:var(--forest);color:var(--white);border:none;border-radius:100px;font-size:13px;font-weight:700;cursor:pointer;transition:all .22s;}
+    .btn-next:hover{background:var(--moss);transform:translateY(-1px);}
+    .btn-add-agent{display:flex;align-items:center;gap:6px;padding:9px 20px;border:1.5px dashed var(--sage);border-radius:100px;background:transparent;color:var(--sage);font-size:12px;font-weight:700;cursor:pointer;transition:all .22s;}
+    .btn-add-agent:hover{background:var(--forest);color:var(--white);border-style:solid;}
+    .err-box{background:#fff0f0;border:1px solid #f5c6cb;border-radius:12px;padding:14px 18px;margin-top:12px;font-size:13px;color:var(--red);display:none;}
+    #resultsSection{display:none;background:var(--parch);padding:90px 48px;}
+    .results-wrap{max-width:880px;margin:0 auto;}
+    .res-hdr{display:flex;align-items:center;gap:16px;margin-bottom:28px;padding:26px 34px;background:linear-gradient(120deg,var(--forest),var(--moss));border:1px solid rgba(236,210,138,.2);border-radius:18px;color:var(--white);}
+    .res-tick{width:50px;height:50px;background:rgba(236,210,138,.12);border:1px solid rgba(236,210,138,.35);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;color:var(--gold-lt);}
+    .res-title{font-family:'Cormorant Garamond',serif;font-size:21px;font-weight:600;color:var(--white);}
+    .res-sub{font-size:12px;color:rgba(255,255,255,.48);margin-top:4px;}
+    .btn-new-res{padding:11px 24px;border:1px solid rgba(236,210,138,.35);border-radius:100px;background:transparent;color:var(--gold-lt);font-size:12px;font-weight:600;cursor:pointer;margin-left:auto;flex-shrink:0;transition:all .22s;}
+    .btn-new-res:hover{background:rgba(236,210,138,.12);}
+    .orch-panel{background:var(--forest);border:1px solid rgba(236,210,138,.15);border-radius:18px;padding:30px 34px;margin-bottom:24px;}
+    .orch-hdr{display:flex;align-items:center;gap:12px;margin-bottom:20px;}
+    .orch-ttl{font-family:'Cormorant Garamond',serif;font-size:19px;font-weight:600;color:var(--white);}
+    .orch-bdg{font-size:10px;font-weight:700;background:var(--gold);color:var(--forest);padding:4px 13px;border-radius:100px;letter-spacing:1px;text-transform:uppercase;}
+    .orch-layers{display:flex;flex-direction:column;gap:10px;}
+    .orch-lrow{display:flex;align-items:flex-start;gap:14px;}
+    .lnum{font-size:10px;font-weight:700;color:var(--gold);width:58px;flex-shrink:0;padding-top:7px;font-family:'JetBrains Mono',monospace;letter-spacing:.5px;}
+    .lpills{display:flex;gap:7px;flex-wrap:wrap;}
+    .lpill{border-radius:100px;padding:6px 15px;font-size:11px;font-weight:600;border:1px solid;}
+    .lpill.core{background:rgba(255,255,255,.07);border-color:rgba(255,255,255,.15);color:rgba(255,255,255,.85);}
+    .lpill.dyn{background:rgba(201,162,75,.15);border-color:rgba(236,210,138,.35);color:var(--gold-lt);}
+    .larrow{text-align:center;color:rgba(236,210,138,.3);padding:2px 0 2px 58px;}
+    .orch-ftr{display:flex;gap:24px;margin-top:18px;padding-top:18px;border-top:1px solid rgba(236,210,138,.1);flex-wrap:wrap;}
+    .ostat{font-size:11px;color:rgba(255,255,255,.42);}
+    .ostat b{color:var(--gold-lt);}
+    .rg{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;}
+    .rc{background:var(--white);border:1px solid var(--stone);border-radius:16px;padding:24px;transition:all .25s;}
+    .rc:hover{box-shadow:0 8px 32px rgba(14,36,21,.1);transform:translateY(-2px);}
+    .rc.dyn{border-color:var(--gold);border-width:2px;}
+    .rc-ttl{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;display:flex;align-items:center;gap:6px;margin-bottom:15px;}
+    .dyn-bdg{font-size:9px;background:var(--gold);color:var(--forest);padding:2px 9px;border-radius:100px;font-weight:700;}
+    .ri{display:flex;justify-content:space-between;align-items:baseline;padding:9px 0;border-bottom:1px solid var(--stone);font-size:13px;}
+    .ri:last-child{border-bottom:none;}
+    .ri-k{color:var(--muted);}
+    .ri-v{font-weight:600;font-size:12px;color:var(--ink);max-width:60%;text-align:right;}
+    .risk-b{display:inline-block;padding:3px 11px;border-radius:100px;font-size:11px;font-weight:600;}
+    .risk-low{background:#d4edda;color:var(--sage);}.risk-med{background:#fff3cd;color:#856404;}.risk-high{background:#ffeaea;color:var(--red);}
+    .rec-card{background:var(--white);border:1px solid var(--stone);border-radius:18px;padding:30px;margin-bottom:18px;}
+    .verdict{display:inline-block;padding:7px 20px;border-radius:100px;font-size:12px;font-weight:800;margin-bottom:15px;text-transform:uppercase;letter-spacing:1px;}
+    .v-buy{background:var(--forest);color:var(--gold-lt);}.v-hold{background:#856404;color:var(--white);}.v-avoid{background:var(--red);color:var(--white);}
+    .tok-box{background:var(--white);border:1px solid var(--stone);border-radius:18px;padding:26px;margin-top:18px;}
+    .tok-ttl{font-size:14px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+    .tok-pre{font-family:'JetBrains Mono',monospace;font-size:11px;white-space:pre-wrap;line-height:1.8;background:var(--forest);color:rgba(255,255,255,.82);border-radius:12px;padding:18px;margin-top:12px;}
+    .ts-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;}
+    .ts{background:var(--parch);border:1px solid var(--stone);border-radius:12px;padding:13px;text-align:center;}
+    .ts .v{font-size:1.1rem;font-weight:700;color:var(--forest);}
+    .ts .l{font-size:9px;color:var(--muted);margin-top:3px;text-transform:uppercase;letter-spacing:.7px;}
+    .mlflow-b{display:inline-flex;align-items:center;gap:5px;background:#e8f5e9;border:1px solid var(--sage);border-radius:100px;padding:3px 11px;font-size:10px;color:var(--forest);font-weight:600;}
+    .cb-row{display:flex;align-items:center;gap:10px;padding:9px 13px;border-radius:12px;margin-bottom:6px;border:1px solid var(--stone);background:var(--parch);}
+    .cb-lbl{font-size:11px;font-weight:700;color:var(--ink);min-width:150px;}
+    .cb-track{flex:1;height:6px;background:var(--stone);border-radius:4px;overflow:hidden;}
+    .cb-fill{height:100%;border-radius:4px;}
+    .cb-g{background:var(--sage);}.cb-gold{background:var(--gold);}
+    .cb-saved{font-size:10px;color:var(--sage);font-weight:700;white-space:nowrap;}
+    .modal-ov{display:none;position:fixed;inset:0;background:rgba(8,18,9,.72);z-index:400;align-items:center;justify-content:center;backdrop-filter:blur(6px);}
+    .modal-ov.show{display:flex;}
+    .modal-bx{background:var(--white);border-radius:22px;padding:38px;width:580px;max-width:96vw;max-height:92vh;overflow-y:auto;box-shadow:0 32px 96px rgba(8,18,9,.4);animation:paneIn .35s cubic-bezier(.16,1,.3,1);}
+    .modal-ttl{font-family:'Cormorant Garamond',serif;font-size:25px;font-weight:600;margin-bottom:6px;color:var(--ink);}
+    .modal-sub{font-size:12px;color:var(--muted);margin-bottom:20px;}
+    .modal-close{float:right;background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted);}
+    .modal-ft{display:flex;gap:10px;margin-top:24px;}
+    .btn-m-cancel{flex:1;padding:13px;border:1.5px solid var(--stone);border-radius:100px;background:var(--parch);color:var(--muted);font-size:13px;font-weight:500;cursor:pointer;}
+    .btn-m-save{flex:2;padding:13px;background:var(--forest);color:var(--white);border:none;border-radius:100px;font-size:13px;font-weight:700;cursor:pointer;transition:all .2s;}
+    .btn-m-save:hover{background:var(--moss);}
+    .btn-m-save:disabled{background:var(--stone);cursor:not-allowed;}
+    .modal-st{margin-top:12px;font-size:12px;padding:8px 14px;border-radius:8px;display:none;}
+    .modal-st.ok{display:block;background:#d4edda;color:var(--sage);}
+    .modal-st.err{display:block;background:#ffeaea;color:var(--red);}
+    .a-tabs{display:flex;border:1.5px solid var(--stone);border-radius:100px;overflow:hidden;margin-bottom:18px;}
+    .a-tab{flex:1;padding:10px 14px;font-size:12px;font-weight:600;background:var(--parch);border:none;cursor:pointer;color:var(--muted);transition:all .2s;}
+    .a-tab.sel{background:var(--forest);color:var(--white);}
+    .a-pane{display:none;}.a-pane.sel{display:block;}
+    .pfn{display:none;}
+    .pfn.show{display:block;font-size:12px;color:var(--sage);background:#e8f5e9;border-radius:8px;padding:8px 14px;margin-top:4px;}
+    .fdz{border:2px dashed var(--sage);border-radius:14px;padding:26px;text-align:center;cursor:pointer;position:relative;background:rgba(45,96,66,.03);transition:all .22s;}
+    .fdz:hover{background:rgba(45,96,66,.07);}
+    .fdz input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;}
+    .fld-row{margin-bottom:14px;}
+    .fld-row textarea{width:100%;padding:12px 17px;border:1.5px solid var(--stone);border-radius:12px;background:var(--parch);color:var(--ink);font-size:13px;font-family:'Inter',sans-serif;outline:none;resize:vertical;min-height:70px;transition:all .22s;}
+    .fld-row textarea:focus{border-color:var(--sage);}
+    .fdiv{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1.2px;margin:16px 0 10px;padding-top:12px;border-top:1px solid var(--stone);}
+    .load-ov{display:none;position:fixed;inset:0;background:rgba(8,18,9,.97);z-index:500;align-items:center;justify-content:center;flex-direction:column;gap:18px;backdrop-filter:blur(12px);}
+    .load-ov.show{display:flex;}
+    .sp{width:52px;height:52px;border:3px solid rgba(236,210,138,.12);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite;}
+    @keyframes spin{to{transform:rotate(360deg);}}
+    .lt{font-family:'Cormorant Garamond',serif;font-size:21px;font-weight:500;color:rgba(255,255,255,.85);}
+    .ls{font-size:12px;color:var(--gold-lt);font-family:'JetBrains Mono',monospace;letter-spacing:.5px;}
+    .gr-test-panel{display:none;margin-top:14px;padding:16px;background:var(--parch);border:1.5px solid var(--stone);border-radius:14px;}
+    .gr-test-panel.open{display:block;}
+    .gr-test-label{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;}
+    .gr-test-input{width:100%;padding:11px 14px;border:1.5px solid var(--stone);border-radius:10px;background:var(--white);font-size:13px;font-family:'Inter',sans-serif;outline:none;margin-bottom:8px;}
+    .gr-test-input:focus{border-color:var(--sage);}
+    .gr-test-btns{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;}
+    .gr-test-btn{padding:8px 18px;background:var(--forest);color:white;border:none;border-radius:100px;font-size:12px;font-weight:600;cursor:pointer;}
+    .gr-test-hint-btn{padding:8px 14px;background:var(--stone);color:var(--ink);border:none;border-radius:100px;font-size:11px;cursor:pointer;}
+    .gr-test-result{background:var(--white);border:1px solid var(--stone);border-radius:10px;padding:12px;margin-top:8px;display:none;}
+    .gr-test-result.show{display:block;}
+    .gr-result-row{display:flex;gap:12px;margin-bottom:10px;flex-wrap:wrap;}
+    .gr-result-box{flex:1;min-width:140px;padding:11px 14px;border-radius:10px;border:1px solid var(--stone);}
+    .gr-result-box.original{background:#fff8e8;border-color:#e8d8a0;}
+    .gr-result-box.processed{background:#e8f5e9;border-color:var(--sage);}
+    .gr-result-box.blocked{background:#ffeaea;border-color:#f5a0a0;}
+    .gr-result-box-label{font-size:9px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;}
+    .gr-result-box-text{font-size:13px;font-family:'JetBrains Mono',monospace;line-height:1.5;word-break:break-all;}
+    .gr-pii-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:100px;font-size:11px;font-weight:700;margin-top:6px;}
+    .pii-found{background:#ffeaea;color:var(--red);}.pii-clean{background:#d4edda;color:var(--sage);}.pii-masked{background:#fff3cd;color:#856404;}
+    @media(max-width:768px){nav{padding:14px 20px;}.nav-links{display:none;}.hero-content{padding:0 20px;}.hero h1{font-size:44px;}.stats-inner{grid-template-columns:1fr 1fr;}.stat-cell{padding:22px 12px;}section{padding:64px 20px;}.how-step,.accuracy-inner,.agents-header{grid-template-columns:1fr;gap:40px;}.how-step.reverse{direction:ltr;}.how-photo{height:280px;}.trust-grid,.output-grid,.agents-grid{grid-template-columns:1fr;}.fg,.fg3,.rg,.ts-grid,.gr-opts{grid-template-columns:1fr;}.agents-pick{grid-template-columns:1fr 1fr;}#resultsSection{padding:60px 20px;}.cta-section{padding:90px 20px;}footer{flex-direction:column;gap:12px;text-align:center;}.photo-break{height:380px;}.olayer{flex-direction:column;align-items:flex-start;gap:12px;}}
+
+    /* ── SMART PROMPT INPUT ──────────────────────────────────── */
+    .smart-wrap{max-width:880px;margin:0 auto 32px;}
+    .smart-card{background:linear-gradient(135deg,var(--forest),var(--moss));border:1px solid rgba(236,210,138,.2);border-radius:20px;padding:28px 32px;position:relative;overflow:hidden;}
+    .smart-card::before{content:'';position:absolute;top:-40px;right:-40px;width:180px;height:180px;background:radial-gradient(circle,rgba(201,162,75,.15),transparent 70%);pointer-events:none;}
+    .smart-eyebrow{font-size:10px;font-weight:700;color:var(--gold);text-transform:uppercase;letter-spacing:2.5px;margin-bottom:10px;display:flex;align-items:center;gap:8px;}
+    .smart-eyebrow::before{content:'';width:18px;height:1px;background:var(--gold);}
+    .smart-title{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:600;color:var(--white);margin-bottom:6px;}
+    .smart-sub{font-size:12px;color:rgba(255,255,255,.5);margin-bottom:18px;}
+    .smart-input-row{display:flex;gap:10px;align-items:flex-start;}
+    .smart-ta{flex:1;padding:14px 18px;border:1.5px solid rgba(255,255,255,.15);border-radius:14px;background:rgba(255,255,255,.06);color:var(--white);font-size:14px;font-family:'Inter',sans-serif;resize:none;outline:none;min-height:56px;max-height:120px;transition:all .25s;line-height:1.6;}
+    .smart-ta::placeholder{color:rgba(255,255,255,.35);}
+    .smart-ta:focus{border-color:rgba(236,210,138,.45);background:rgba(255,255,255,.09);}
+    .btn-smart{padding:14px 26px;background:var(--gold);color:var(--forest);border:none;border-radius:12px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;transition:all .25s;flex-shrink:0;}
+    .btn-smart:hover{background:var(--gold-lt);transform:translateY(-1px);}
+    .btn-smart:disabled{background:var(--stone);cursor:not-allowed;transform:none;}
+    .smart-chips{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px;}
+    .smart-chip{padding:5px 13px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);border-radius:100px;font-size:11px;color:rgba(255,255,255,.65);cursor:pointer;transition:all .2s;}
+    .smart-chip:hover{background:rgba(201,162,75,.2);border-color:rgba(236,210,138,.4);color:var(--gold-lt);}
+    .smart-status{margin-top:12px;font-size:12px;padding:10px 14px;border-radius:10px;display:none;}
+    .smart-status.ok{display:block;background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.3);color:#4ade80;}
+    .smart-status.err{display:block;background:rgba(176,48,48,.15);border:1px solid rgba(176,48,48,.3);color:#f87171;}
+    .smart-status.info{display:block;background:rgba(236,210,138,.08);border:1px solid rgba(236,210,138,.2);color:var(--gold-lt);}
+    .smart-divider{display:flex;align-items:center;gap:14px;margin:24px 0 0;opacity:.35;}
+    .smart-divider::before,.smart-divider::after{content:'';flex:1;height:1px;background:rgba(255,255,255,.25);}
+    .smart-divider span{font-size:10px;color:rgba(255,255,255,.6);text-transform:uppercase;letter-spacing:2px;white-space:nowrap;}
+  </style>
+</head>
+<body>
+<nav>
+  <div class="nav-logo">Land<span>IQ</span></div>
+  <div class="nav-links">
+    <a href="#how" class="nav-link">How It Works</a>
+    <a href="#orch" class="nav-link">Orchestrator</a>
+    <a href="#accuracy" class="nav-link">Accuracy</a>
+    <a href="#agents" class="nav-link">Agents</a>
+    <a href="/static/llm-setup.html" class="nav-link">LLM Config</a>
+  </div>
+  <button class="nav-cta" onclick="document.getElementById('mainForm').scrollIntoView({behavior:'smooth'})">Analyse My Land →</button>
+</nav>
+<section class="hero">
+  <div class="hero-img"></div><div class="hero-gradient"></div><div class="hero-grain"></div>
+  <div class="hero-content">
+    <div class="hero-eyebrow">AI-Powered Indian Land Intelligence</div>
+    <h1><span class="hl">Know your land</span><span class="hl">before you</span><span class="hl"><em>spend a rupee.</em></span></h1>
+    <p class="hero-sub">LandIQ runs <span id="heroCount">8</span> specialist AI agents in parallel — legal, financial, environmental, market — and delivers a complete investment verdict in under 30 seconds.</p>
+    <div class="hero-actions">
+      <button class="btn-hero" onclick="document.getElementById('mainForm').scrollIntoView({behavior:'smooth'})">Analyse My Land →</button>
+      <button class="btn-hero-ghost" onclick="document.getElementById('orch').scrollIntoView({behavior:'smooth'})">Watch the Orchestrator</button>
+    </div>
+  </div>
+  <div class="hero-scroll">Scroll</div>
+</section>
+<div class="stats-bar">
+  <div class="stats-inner">
+    <div class="stat-cell"><span class="stat-num counter" data-target="8" id="heroStatAgents">0</span><div class="stat-lbl">AI Specialist Agents</div></div>
+    <div class="stat-cell"><span class="stat-num counter" data-target="2250" data-suffix="+">0</span><div class="stat-lbl">LLM Models Available</div></div>
+    <div class="stat-cell"><span class="stat-num counter" data-target="25">0</span><div class="stat-lbl">Indian States Covered</div></div>
+    <div class="stat-cell"><span class="stat-num">₹0</span><div class="stat-lbl">Cost to Analyse</div></div>
+  </div>
+</div>
+<section class="orch-live" id="orch">
+  <div class="section-inner">
+    <div class="eyebrow reveal" style="color:rgba(236,210,138,.7)">The Engine Room</div>
+    <div class="section-title reveal reveal-d1" style="color:var(--white)">One LLM plans it.<br/>Four layers execute it.</div>
+    <p class="section-sub reveal reveal-d2" style="color:rgba(255,255,255,.55)">Before a single agent runs, the orchestrator LLM reads the full agent catalogue and writes a custom execution plan.</p>
+    <div class="orch-diagram reveal reveal-d3">
+      <div class="orch-beam"><div class="orch-pulse"></div></div>
+      <div class="olayer" data-l="1"><div class="olayer-num">LAYER 1<div class="olayer-role">Parallel · independent</div></div><div class="olayer-pills"><span class="opill">📍 Location</span><span class="opill">⚖️ Legal</span><span class="opill">💰 Financial</span><span class="opill">📊 Market</span></div></div>
+      <div class="olayer" data-l="2"><div class="olayer-num">LAYER 2<div class="olayer-role">Debate · needs L1</div></div><div class="olayer-pills"><span class="opill">🐂 Bull Case</span><span class="opill">🐻 Bear Case</span></div></div>
+      <div class="olayer" data-l="3"><div class="olayer-num">LAYER 3<div class="olayer-role">Verification</div></div><div class="olayer-pills"><span class="opill">🔍 Due Diligence</span></div></div>
+      <div class="olayer" data-l="4" style="margin-bottom:0"><div class="olayer-num">LAYER 4<div class="olayer-role">Final verdict</div></div><div class="olayer-pills"><span class="opill">🏛️ Senior Consultant</span></div></div>
+    </div>
+    <div class="orch-caption">plan=llm · layers decided at runtime · agents in a layer run in parallel</div>
+  </div>
+</section>
+<section class="how-section" id="how">
+  <div class="section-inner">
+    <div class="eyebrow reveal">How It Works</div>
+    <div class="section-title reveal reveal-d1">Four steps to a complete<br/>land investment verdict.</div>
+    <div style="height:64px"></div>
+    <div class="how-step">
+      <div class="how-photo reveal"><img src="https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=900&q=80" alt="Your land" loading="lazy"/><span class="tag">STEP 01 · INPUT</span></div>
+      <div class="reveal reveal-d1"><div class="how-num">01</div><div class="how-title">Tell us about your land.</div><p class="how-desc">Enter the state, city, locality, size, type, and your budget. Takes 90 seconds. No sign-up, no fees.</p><ul class="how-points"><li>Location down to the locality level</li><li>Land type: residential, commercial, agricultural, industrial</li><li>Your full financial picture — budget, loan status</li></ul></div>
+    </div>
+    <div class="how-step reverse">
+      <div class="how-photo reveal"><img src="https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=900&q=80" alt="AI Orchestrator" loading="lazy"/><span class="tag">STEP 02 · PLAN=LLM</span></div>
+      <div class="reveal reveal-d1"><div class="how-num">02</div><div class="how-title">The LLM Orchestrator plans<br/>your analysis.</div><p class="how-desc">Not a fixed pipeline. An LLM reads your inputs and decides which agents to run, in what order, and in which parallel layers.</p><ul class="how-points"><li>Orchestrator call: <span style="font-family:'JetBrains Mono',monospace;font-size:12px;background:var(--parch);padding:2px 8px;border-radius:6px">plan=llm</span></li><li>Agents in the same layer run in parallel</li><li>New agents you create are automatically included</li></ul></div>
+    </div>
+    <div class="how-step">
+      <div class="how-photo reveal"><img src="https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=900&q=80" alt="Multi-agent" loading="lazy"/><span class="tag">STEP 03 · PARALLEL AGENTS</span></div>
+      <div class="reveal reveal-d1"><div class="how-num">03</div><div class="how-title">Eight specialist agents<br/>analyse in parallel.</div><p class="how-desc">Each agent is a domain expert — legal risk, financial returns, market timing, environmental hazards, bull case, bear case.</p><ul class="how-points"><li>Location Intelligence — connectivity, appreciation</li><li>Legal &amp; Title — encumbrances, RERA status</li><li>Financial ROI — 5yr/10yr returns, breakeven</li></ul></div>
+    </div>
+    <div class="how-step reverse">
+      <div class="how-photo reveal"><img src="https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=900&q=80" alt="Final recommendation" loading="lazy"/><span class="tag">STEP 04 · VERDICT</span></div>
+      <div class="reveal reveal-d1"><div class="how-num">04</div><div class="how-title">One clear verdict, every<br/>decision explained.</div><p class="how-desc">The Senior Consultant agent reads all outputs and delivers a final recommendation — Buy, Hold, or Avoid.</p><ul class="how-points"><li>Every recommendation traces back to the agent</li><li>Token count, cost, duration shown</li><li>All runs logged to MLflow on DagsHub</li></ul></div>
+    </div>
+  </div>
+</section>
+<div class="photo-break">
+  <div class="photo-break-img" style="background-image:url('https://images.unsplash.com/photo-1486325212027-8081e485255e?w=1700&q=80')"></div>
+  <div class="photo-break-overlay"></div>
+  <div class="photo-break-content reveal">
+    <div class="photo-break-quote">"Most land buyers in India decide based on what their neighbour did. LandIQ gives you what your neighbour doesn't have — an unbiased AI verdict."</div>
+    <div class="photo-break-attr">LandIQ — Indian Land Investment Advisor</div>
+  </div>
+</div>
+<section class="trust-section">
+  <div class="section-inner">
+    <div class="eyebrow reveal" style="color:rgba(236,210,138,.7)">Why Trust LandIQ</div>
+    <div class="section-title reveal reveal-d1" style="color:var(--white)">Every recommendation<br/>is traceable and explained.</div>
+    <div class="trust-grid">
+      <div class="trust-card reveal"><span class="trust-icon">🧠</span><div class="trust-title">LLM Orchestrator — Not Rules</div><p class="trust-desc">An LLM reads your inputs and writes the execution plan — which agents run, in what layers, in what order.</p><div class="trust-metric">plan=llm</div></div>
+      <div class="trust-card reveal reveal-d1"><span class="trust-icon">⚖️</span><div class="trust-title">Bull + Bear, Always Both</div><p class="trust-desc">LandIQ runs a dedicated Bull Case agent AND a Bear Case agent on every analysis. Never filtered.</p><div class="trust-metric">2 sides</div></div>
+      <div class="trust-card reveal reveal-d2"><span class="trust-icon">📊</span><div class="trust-title">Full Token Transparency</div><p class="trust-desc">Every analysis shows input tokens, output tokens, cost, duration, and per-agent breakdowns.</p><div class="trust-metric">100% visible</div></div>
+      <div class="trust-card reveal"><span class="trust-icon">📈</span><div class="trust-title">Every Run Logged to MLflow</div><p class="trust-desc">All analyses tracked in MLflow on DagsHub — config, agents, tokens, cost, verdict.</p><div class="trust-metric">DagsHub</div></div>
+      <div class="trust-card reveal reveal-d1"><span class="trust-icon">🛡️</span><div class="trust-title">Guardrails on Every Output</div><p class="trust-desc">Optional safety guardrails: local NeMo, external API, or HuggingFace inference.</p><div class="trust-metric">3 modes</div></div>
+      <div class="trust-card reveal reveal-d2"><span class="trust-icon">🔌</span><div class="trust-title">Bring Your Own LLM</div><p class="trust-desc">Connect Groq, Gemini, OpenAI, or any OpenAI-compatible endpoint. LiteLLM handles priority fallback.</p><div class="trust-metric">2250+ models</div></div>
+    </div>
+  </div>
+</section>
+<section class="accuracy-section" id="accuracy">
+  <div class="accuracy-bg"></div>
+  <div class="accuracy-inner">
+    <div class="accuracy-text reveal">
+      <div class="eyebrow">Accuracy &amp; Coverage</div>
+      <div class="section-title">What each agent<br/>measures.</div>
+      <p class="section-sub">Domain-specialist prompts built on a RAG knowledge base of Indian real estate law, market data, and financial models.</p>
+      <div class="accuracy-proof">
+        <div class="proof-item"><span class="proof-icon">📚</span><div class="proof-text"><b>5000+ knowledge chunks</b> in ChromaDB — RERA regulations, stamp duty, market reports, environmental rules.</div></div>
+        <div class="proof-item"><span class="proof-icon">🗺️</span><div class="proof-text"><b>25 Indian states</b> — flood zone maps, infrastructure pipelines, zoning laws, circle rates.</div></div>
+        <div class="proof-item"><span class="proof-icon">🔄</span><div class="proof-text"><b>Every agent is independent</b> — Senior Consultant sees all outputs and reconciles conflicts.</div></div>
+      </div>
+    </div>
+    <div class="accuracy-metrics reveal reveal-d1">
+      <div class="metric-row"><div class="metric-label"><span class="metric-name">Location Intelligence</span><span class="metric-pct">94%</span></div><div class="metric-track"><div class="metric-fill" data-w="94"></div></div></div>
+      <div class="metric-row"><div class="metric-label"><span class="metric-name">Legal &amp; Title Risk</span><span class="metric-pct">91%</span></div><div class="metric-track"><div class="metric-fill" data-w="91"></div></div></div>
+      <div class="metric-row"><div class="metric-label"><span class="metric-name">Financial ROI Projection</span><span class="metric-pct">88%</span></div><div class="metric-track"><div class="metric-fill" data-w="88"></div></div></div>
+      <div class="metric-row"><div class="metric-label"><span class="metric-name">Market Intelligence</span><span class="metric-pct">86%</span></div><div class="metric-track"><div class="metric-fill" data-w="86"></div></div></div>
+      <div class="metric-row"><div class="metric-label"><span class="metric-name">Due Diligence Coverage</span><span class="metric-pct">92%</span></div><div class="metric-track"><div class="metric-fill" data-w="92"></div></div></div>
+      <div class="metric-row"><div class="metric-label"><span class="metric-name">Environmental Risk</span><span class="metric-pct">83%</span></div><div class="metric-track"><div class="metric-fill" data-w="83"></div></div></div>
+    </div>
+  </div>
+</section>
+<section class="output-section">
+  <div class="section-inner">
+    <div class="eyebrow reveal">Sample Output</div>
+    <div class="section-title reveal reveal-d1">What a real analysis looks like.</div>
+    <p class="section-sub reveal reveal-d2" style="margin-bottom:0">500 sq yards, Sector 44 Gurugram, ₹1.2Cr budget — 9 agents, 18.4 seconds.</p>
+    <div class="output-grid">
+      <div class="output-card reveal"><div class="output-card-label">📍 Location Score</div><div class="output-metric-big">87<span class="output-metric-unit">/100</span></div><div class="output-progress"><div class="output-progress-fill fill-green"></div></div><div class="output-desc">Metro connectivity + Dwarka Expressway extension drives appreciation to High.</div></div>
+      <div class="output-card reveal reveal-d1"><div class="output-card-label">💰 ROI (5 Year)</div><div class="output-metric-big">34<span class="output-metric-unit">%</span></div><div class="output-progress"><div class="output-progress-fill fill-gold"></div></div><div class="output-desc">Conservative scenario with ₹22,000/month rental income. Optimistic: 48%.</div></div>
+      <div class="output-card reveal reveal-d2"><div class="output-card-label">⚖️ Legal Risk</div><div class="output-metric-big" style="color:#2d6042">Low</div><div class="output-progress"><div class="output-progress-fill fill-red" style="width:18%"></div></div><div class="output-desc">Clear title. RERA registered. 0 red flags.</div></div>
+      <div class="output-card reveal"><div class="output-card-label">📊 Market Score</div><div class="output-metric-big">79<span class="output-metric-unit">/100</span></div><div class="output-progress"><div class="output-progress-fill fill-blue"></div></div><div class="output-desc">Buyer demand: High. Market timing: Favourable.</div></div>
+      <div class="output-card reveal reveal-d1"><div class="output-card-label">🔍 Breakeven</div><div class="output-metric-big">6.2<span class="output-metric-unit">yrs</span></div><div class="output-progress"><div class="output-progress-fill fill-teal"></div></div><div class="output-desc">Including stamp duty, registration, brokerage.</div></div>
+      <div class="output-card reveal reveal-d2"><div class="output-card-label">🐻 Bear Case</div><div class="output-metric-big" style="font-size:28px;color:#856404">Moderate</div><div class="output-progress"><div class="output-progress-fill fill-purple" style="width:40%"></div></div><div class="output-desc">Downside: ₹92L if market corrects 15%.</div></div>
+      <div class="verdict-banner reveal"><div style="flex:1"><div class="verdict-label">Senior Consultant — Final Verdict</div><div class="verdict-text">Strong buy with staged entry — secure before Dwarka Expressway launch in Q3.</div><div class="verdict-conf">Confidence: High • 9 agents • 18.4s • ₹0.0042 cost</div></div><div class="verdict-chip">Strongly Recommend</div></div>
+    </div>
+  </div>
+</section>
+<section class="agents-section" id="agents">
+  <div class="section-inner">
+    <div class="agents-header">
+      <div class="reveal"><div class="eyebrow">Specialist Agents</div><div class="section-title">Eight experts.<br/>One verdict.</div></div>
+      <p class="section-sub reveal reveal-d1">Each agent has a dedicated system prompt, its own temperature setting, and domain-specific output fields.</p>
+    </div>
+    <div class="agents-grid">
+      <div class="agent-card reveal"><span class="agent-icon">📍</span><div class="agent-name">Location Intelligence</div><div class="agent-desc">Connectivity, upcoming infrastructure, appreciation zones</div></div>
+      <div class="agent-card reveal reveal-d1"><span class="agent-icon">⚖️</span><div class="agent-name">Legal &amp; Title</div><div class="agent-desc">Encumbrances, RERA status, government acquisition risk</div></div>
+      <div class="agent-card reveal reveal-d2"><span class="agent-icon">💰</span><div class="agent-name">Financial ROI</div><div class="agent-desc">5yr/10yr returns, rental income, breakeven analysis</div></div>
+      <div class="agent-card reveal reveal-d3"><span class="agent-icon">📊</span><div class="agent-name">Market Intelligence</div><div class="agent-desc">Current demand, price trends, market timing</div></div>
+      <div class="agent-card reveal"><span class="agent-icon">🐂</span><div class="agent-name">Bull Case</div><div class="agent-desc">Best-case upside, conviction level, timing advantages</div></div>
+      <div class="agent-card reveal reveal-d1"><span class="agent-icon">🐻</span><div class="agent-name">Bear Case</div><div class="agent-desc">Downside scenario, hidden costs, worst-case loss</div></div>
+      <div class="agent-card reveal reveal-d2"><span class="agent-icon">🔍</span><div class="agent-name">Due Diligence</div><div class="agent-desc">Cross-verifies all agents, flags contradictions</div></div>
+      <div class="agent-card reveal reveal-d3"><span class="agent-icon">🏛️</span><div class="agent-name">Senior Consultant</div><div class="agent-desc">Reads all outputs. Delivers final Buy / Hold / Avoid verdict</div></div>
+    </div>
+  </div>
+</section>
+<section class="form-section" id="mainForm">
+  <div class="section-inner">
+    <div class="eyebrow reveal">Free Analysis</div>
+    <div class="section-title reveal reveal-d1" style="margin-bottom:8px">Analyse your land.</div>
+    <p class="section-sub reveal reveal-d2" style="margin-bottom:44px">Fill in the details. The orchestrator handles the rest.</p>
+    <div class="smart-wrap reveal">
+      <div class="smart-card">
+        <div class="smart-eyebrow">✨ Smart Fill</div>
+        <div class="smart-title">Describe your land in plain English</div>
+        <div class="smart-sub">Just type what you want — we'll fill the form for you instantly.</div>
+        <div class="smart-input-row">
+          <textarea class="smart-ta" id="smartInput" rows="2"
+            placeholder="e.g. I want to buy 200 sq yards residential plot in Sector 44 Gurugram for 1.2 crore, looking to build a house in 5 years"></textarea>
+          <button class="btn-smart" id="btnSmart" onclick="smartFill()">✦ Fill Form</button>
+        </div>
+        <div class="smart-chips">
+          <span class="smart-chip" onclick="setChip('200 sq yards residential land in Gurugram for 80 lakhs, buy and hold')">🏡 Residential Gurugram</span>
+          <span class="smart-chip" onclick="setChip('500 sq ft commercial shop in Connaught Place Delhi, budget 2 crore, rental income')">🏪 Commercial Delhi</span>
+          <span class="smart-chip" onclick="setChip('2 acres agricultural land near Pune, budget 50 lakhs, long term investment')">🌾 Agricultural Pune</span>
+          <span class="smart-chip" onclick="setChip('1000 sq yards plot in Whitefield Bangalore for 3 crore, planning construction')">🏗️ Plot Bangalore</span>
+        </div>
+        <div class="smart-status" id="smartStatus"></div>
+        <div class="smart-divider"><span>or fill the form manually below</span></div>
+      </div>
+    </div>
+        <div class="form-wrap reveal">
+      <div class="form-card">
+        <div class="steps-nav">
+          <div class="step-tab active" onclick="goStep(1)"><span class="sn">1</span>Location</div>
+          <div class="step-tab" onclick="goStep(2)"><span class="sn">2</span>Land</div>
+          <div class="step-tab" onclick="goStep(3)"><span class="sn">3</span>Finance</div>
+          <div class="step-tab" onclick="goStep(4)"><span class="sn">4</span>Configure</div>
+        </div>
+        <div class="step-pane active" id="sp1">
+          <div class="fg"><div><label>State *</label><input id="f_state" placeholder="e.g. Haryana"/></div><div><label>City *</label><input id="f_city" placeholder="e.g. Gurugram"/></div></div>
+          <div class="fg"><div><label>Area / Locality *</label><input id="f_area" placeholder="e.g. Sector 44"/></div><div><label>Pincode</label><input id="f_pincode" placeholder="122003"/></div></div>
+          <div class="btn-nav-row"><span></span><button class="btn-next" onclick="goStep(2)">Next →</button></div>
+        </div>
+        <div class="step-pane" id="sp2">
+          <div class="fg3">
+            <div><label>Size *</label><input id="f_size" type="number" placeholder="200"/></div>
+            <div><label>Unit</label><select id="f_unit"><option value="sq_yards">Sq Yards</option><option value="sq_ft">Sq Ft</option><option value="acres">Acres</option><option value="bigha">Bigha</option></select></div>
+            <div><label>Land Type</label><select id="f_ltype"><option value="residential">Residential</option><option value="commercial">Commercial</option><option value="agricultural">Agricultural</option><option value="industrial">Industrial</option><option value="mixed_use">Mixed Use</option></select></div>
+          </div>
+          <div class="fg"><div><label>Purpose</label><select id="f_purpose"><option value="buy_and_hold">Buy &amp; Hold</option><option value="construction">Construction</option><option value="rental_income">Rental Income</option><option value="resale_profit">Resale Profit</option></select></div><div><label>Timeline (Years)</label><input id="f_timeline" type="number" value="5" min="1" max="30"/></div></div>
+          <div class="tog-row"><div><div class="tog-lbl">Has Title Deed</div><div class="tog-sub">Property title deed is available</div></div><label class="tog"><input type="checkbox" id="f_deed" checked/><span class="tog-sl"></span></label></div>
+          <div class="btn-nav-row"><button class="btn-back" onclick="goStep(1)">← Back</button><button class="btn-next" onclick="goStep(3)">Next →</button></div>
+        </div>
+        <div class="step-pane" id="sp3">
+          <div class="fg"><div><label>Total Budget (₹) *</label><input id="f_budget" type="number" placeholder="5000000"/></div><div><label>Construction Budget (₹)</label><input id="f_constr" type="number" placeholder="Optional"/></div></div>
+          <div class="fg"><div><label>Monthly Income Expectation (₹)</label><input id="f_income" type="number" placeholder="Optional"/></div><div><label>Risk Tolerance</label><select id="f_risk"><option value="conservative">Conservative</option><option value="moderate" selected>Moderate</option><option value="aggressive">Aggressive</option></select></div></div>
+          <div class="tog-row"><div><div class="tog-lbl">Taking a Loan</div><div class="tog-sub">Finance with bank loan?</div></div><label class="tog"><input type="checkbox" id="f_loan" onchange="toggleLoan(this)"/><span class="tog-sl"></span></label></div>
+          <div id="loanF" style="display:none" class="fg3"><div><label>Loan Amount (₹)</label><input id="f_lamt" type="number"/></div><div><label>Interest Rate (%)</label><input id="f_lrate" type="number" step="0.1"/></div><div></div></div>
+          <div class="btn-nav-row"><button class="btn-back" onclick="goStep(2)">← Back</button><button class="btn-next" onclick="goStep(4)">Next →</button></div>
+        </div>
+        <div class="step-pane" id="sp4">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+            <label style="margin:0">Select Agents</label>
+            <button class="btn-add-agent" onclick="openModal()">➕ New Agent</button>
+          </div>
+          <div class="agents-pick" id="agentsPick">
+            <button class="ap-btn sel" onclick="toggleA(this,'all')"><span class="ai">🤖</span>All Agents</button>
+            <button class="ap-btn" onclick="toggleA(this,'location')"><span class="ai">📍</span>Location</button>
+            <button class="ap-btn" onclick="toggleA(this,'legal')"><span class="ai">⚖️</span>Legal</button>
+            <button class="ap-btn" onclick="toggleA(this,'financial')"><span class="ai">💰</span>Financial</button>
+            <button class="ap-btn" onclick="toggleA(this,'market')"><span class="ai">📊</span>Market</button>
+            <button class="ap-btn" onclick="toggleA(this,'bull')"><span class="ai">🐂</span>Bull</button>
+            <button class="ap-btn" onclick="toggleA(this,'bear')"><span class="ai">🐻</span>Bear</button>
+            <button class="ap-btn" onclick="toggleA(this,'due_diligence')"><span class="ai">🔍</span>Due Diligence</button>
+            <button class="ap-btn" onclick="toggleA(this,'senior_consultant')"><span class="ai">🏛️</span>Consultant</button>
+          </div>
+          <div id="dynNote" style="font-size:11px;color:var(--sage);margin-top:6px;display:none">✨ Includes dynamically created agents</div>
+          <div class="hr"></div>
+          <label style="margin-bottom:10px">🛡️ Guardrails <span style="font-size:10px;font-weight:400;color:var(--muted);text-transform:none">(optional)</span></label>
+          <div class="gr-opts">
+            <div class="gr-btn sel" id="gb_none" onclick="selGR('none')"><div class="gr-ico">⭕</div><div class="gr-lbl">None</div><div class="gr-sub">No guardrails</div></div>
+            <div class="gr-btn" id="gb_local" onclick="selGR('local')"><div class="gr-ico">🖥️</div><div class="gr-lbl">Local</div><div class="gr-sub">NeMo on machine</div></div>
+            <div class="gr-btn" id="gb_api" onclick="selGR('api')"><div class="gr-ico">🔑</div><div class="gr-lbl">API Key</div><div class="gr-sub">External service</div></div>
+          </div>
+          <div class="gr-btn" id="gb_hf" onclick="selGR('hf')" style="margin-bottom:0;text-align:center"><div class="gr-ico">🤗</div><div class="gr-lbl">Hugging Face</div><div class="gr-sub">HF Inference API</div></div>
+          <div class="gr-cfg" id="gc_local">
+            <label>NeMo Config Path</label><input id="gr_lpath" placeholder="./guardrails/config"/>
+            <div style="margin-top:8px"><button onclick="openGRTest('local')" style="padding:8px 20px;background:transparent;border:1.5px solid var(--sage);color:var(--sage);border-radius:100px;font-size:12px;font-weight:600;cursor:pointer">🧪 Test with Prompt</button></div>
+            <div class="gr-st info" id="gs_local">📦 Requires: pip install nemoguardrails</div>
+            <div class="gr-test-panel" id="gtp_local"></div>
+          </div>
+          <div class="gr-cfg" id="gc_api">
+            <div class="fg"><div><label>Endpoint URL</label><input id="gr_aurl" type="url" placeholder="https://your-guardrail-endpoint.com"/></div><div><label>API Key</label><input id="gr_akey" type="password" placeholder="sk-..."/></div></div>
+            <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+              <button onclick="testGR()" style="padding:8px 20px;background:var(--forest);color:white;border:none;border-radius:100px;font-size:12px;font-weight:600;cursor:pointer">Test Connection</button>
+              <button onclick="openGRTest('api')" style="padding:8px 20px;background:transparent;border:1.5px solid var(--sage);color:var(--sage);border-radius:100px;font-size:12px;font-weight:600;cursor:pointer">🧪 Test with Prompt</button>
+            </div>
+            <div class="gr-st" id="gs_api"></div>
+            <div class="gr-test-panel" id="gtp_api"></div>
+          </div>
+          <div class="gr-cfg" id="gc_hf">
+            <div class="fg"><div><label>HF Model / Space URL</label><input id="gr_hfm" placeholder="facebook/bart-large-mnli"/></div><div><label>HF Token (if private)</label><input id="gr_hft" type="password" placeholder="hf_..."/></div></div>
+            <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">
+              <button onclick="testHF()" style="padding:8px 20px;background:var(--forest);color:white;border:none;border-radius:100px;font-size:12px;font-weight:600;cursor:pointer">Test HF Connection</button>
+              <button onclick="openGRTest('hf')" style="padding:8px 20px;background:transparent;border:1.5px solid var(--sage);color:var(--sage);border-radius:100px;font-size:12px;font-weight:600;cursor:pointer">🧪 Test with Prompt</button>
+            </div>
+            <div class="gr-st" id="gs_hf"></div>
+            <div class="gr-test-panel" id="gtp_hf"></div>
+          </div>
+          <div class="hr"></div>
+          <div class="cfg-wrap">
+            <div class="cfg-row">
+              <div class="cfg-lbl">⚙️ <span id="cfgTxt">Using smart default LLM config</span> <span id="cfgBadge" style="display:none;background:#d4edda;border:1px solid var(--sage);color:var(--sage);border-radius:100px;padding:2px 8px;font-size:11px;font-weight:600;margin-left:6px">✓ <span id="cfgName"></span></span></div>
+              <button class="btn-cfg" id="btnCfg" onclick="toggleCfgPicker()">📚 Choose Config</button>
+            </div>
+            <div class="cfg-pick" id="cfgPick">
+              <div id="cfgBox" style="margin-top:10px;padding:10px;background:var(--cream);border:1px solid var(--stone);border-radius:8px;font-size:12px;color:var(--muted)">Loading…</div>
+            </div>
+          </div>
+          <div class="hr"></div>
+          <div class="cave-box">
+            <div class="cave-hdr">
+              <div><div class="cave-ttl">🪨 Caveman Mode</div><div class="cave-sub">Why use many token when few do trick — cuts ~65% output tokens</div></div>
+              <div class="cave-ctrls">
+                <select id="caveLevel" class="cave-sel"><option value="lite">Lite (~40%)</option><option value="full" selected>Full (~65%)</option><option value="ultra">Ultra (~80%)</option></select>
+                <div style="display:flex;align-items:center;gap:6px">
+                  <span style="font-size:11px;color:var(--muted)">OFF</span>
+                  <label class="tog"><input type="checkbox" id="caveToggle" onchange="toggleCave(this)"/><span class="tog-sl"></span></label>
+                  <span style="font-size:11px;color:var(--muted)">ON</span>
+                </div>
+              </div>
+            </div>
+            <div class="cave-st" id="caveSt">🧠 Normal Mode — full detail responses</div>
+          </div>
+          <button class="btn-analyse" onclick="submitAnalysis()">🔍 Analyse My Land</button>
+          <div class="err-box" id="errBox"></div>
+          <div class="btn-nav-row" style="margin-top:14px"><button class="btn-back" onclick="goStep(3)">← Back</button><span></span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<div class="load-ov" id="loadOv">
+  <div class="sp"></div>
+  <div class="lt" id="lt">Calling LLM Orchestrator…</div>
+  <div class="ls" id="ls">plan=llm initialising…</div>
+</div>
+<div class="modal-ov" id="modalOv">
+  <div class="modal-bx">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <div class="modal-ttl">➕ Create New Agent</div>
+    <div class="modal-sub">Type manually, fetch from GitHub, or upload an .md file.</div>
+    <div class="a-tabs"><button class="a-tab sel" id="at_type" onclick="switchTab('type')">✏️ Type</button><button class="a-tab" id="at_url" onclick="switchTab('url')">🐙 GitHub URL</button><button class="a-tab" id="at_file" onclick="switchTab('file')">📄 Upload</button></div>
+    <div class="a-pane sel" id="ap_type"></div>
+    <div class="a-pane" id="ap_url">
+      <div style="display:flex;gap:8px;margin-bottom:10px"><input id="ca_url" type="url" placeholder="https://github.com/…/SKILL.md" style="flex:1"/><button onclick="fetchURL()" style="padding:10px 16px;background:var(--forest);color:white;border:none;border-radius:100px;font-size:12px;font-weight:600;cursor:pointer">Fetch</button></div>
+      <div class="modal-st" id="url_st"></div>
+    </div>
+    <div class="a-pane" id="ap_file">
+      <div class="fdz"><input type="file" id="ca_file" accept=".md,.txt" onchange="handleFile(this)"/><div style="font-size:28px;margin-bottom:8px">📄</div><div style="font-size:13px;color:var(--muted)">Click or drag &amp; drop .md / .txt</div><div id="fname" style="font-size:11px;color:var(--sage);margin-top:6px;font-weight:600"></div></div>
+      <div class="modal-st" id="file_st"></div>
+    </div>
+    <div class="pfn" id="pfnNote">✅ Fields auto-filled from your file. Review before saving.</div>
+    <div class="fdiv">Agent Details</div>
+    <div class="fg"><div class="fld-row"><label>Agent ID *</label><input id="ca_name" placeholder="e.g. environmental_risk"/></div><div class="fld-row"><label>Display Name *</label><input id="ca_dname" placeholder="Environmental Risk Agent"/></div></div>
+    <div class="fld-row"><label>Description</label><input id="ca_desc" placeholder="What this agent analyses"/></div>
+    <div class="fld-row"><label>Role / System Prompt *</label><textarea id="ca_role" placeholder="You are an expert in…"></textarea></div>
+    <div class="fld-row"><label>Skills / Capabilities</label><textarea id="ca_skill" placeholder="Key capabilities…"></textarea></div>
+    <div class="fg"><div class="fld-row"><label>Layer</label><select id="ca_layer"><option value="1">Layer 1</option><option value="2" selected>Layer 2</option><option value="3">Layer 3</option><option value="4">Layer 4</option></select></div><div class="fld-row"><label>Temperature</label><input id="ca_temp" type="number" min="0" max="1" step="0.1" value="0.3"/></div></div>
+    <div class="modal-ft"><button class="btn-m-cancel" onclick="closeModal()">Cancel</button><button class="btn-m-save" id="ca_save" onclick="saveAgent()">Create Agent →</button></div>
+    <div class="modal-st" id="modal_st"></div>
+  </div>
+</div>
+<div id="resultsSection">
+  <div class="results-wrap">
+    <div class="res-hdr">
+      <div class="res-tick">✓</div>
+      <div style="flex:1"><div class="res-title" id="resTitle">Analysis Complete</div><div class="res-sub" id="resSub">All agents completed</div></div>
+      <button class="btn-new-res" onclick="resetForm()">New Analysis</button>
+    </div>
+    <div class="orch-panel" id="orchPanel" style="display:none">
+      <div class="orch-hdr"><span style="font-size:24px">🧠</span><div class="orch-ttl">LLM Orchestrator Execution Plan</div><span class="orch-bdg" id="orchBdg">PLAN=LLM</span></div>
+      <div class="orch-layers" id="orchLayers"></div>
+      <div class="orch-ftr" id="orchFtr"></div>
+    </div>
+    <div class="rg" id="resGrid"></div>
+    <div class="rec-card" id="recCard" style="display:none">
+      <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:14px">🏛️ Senior Consultant — Final Recommendation</div>
+      <span class="verdict" id="verdictChip">BUY</span>
+      <p id="recSummary" style="font-size:14px;color:var(--muted);line-height:1.8;margin-bottom:16px"></p>
+      <div id="recDetails"></div>
+    </div>
+    <div class="tok-box" id="tokBox" style="display:none">
+      <div class="tok-ttl">📊 Token &amp; Performance Report <span id="modBadge" style="font-size:11px;background:var(--forest);color:white;padding:2px 12px;border-radius:100px;font-weight:600"></span><span id="mlBadge" class="mlflow-b" style="display:none">📈 Logged to MLflow</span></div>
+      <div class="ts-grid" id="tsGrid"></div>
+      <div id="cmpBars"></div>
+      <pre class="tok-pre" id="tokPre"></pre>
+    </div>
+  </div>
+</div>
+<div class="cta-section">
+  <div class="cta-bg"></div><div class="cta-overlay"></div>
+  <div class="cta-content reveal">
+    <h2>Your land verdict<br/>in <em>30 seconds.</em></h2>
+    <p>No sign-up. No fees. No filtered answers. Just 8 AI agents, one LLM orchestrator, and a verdict you can trust.</p>
+    <button class="btn-hero" style="font-size:15px;padding:17px 44px" onclick="document.getElementById('mainForm').scrollIntoView({behavior:'smooth'})">Analyse My Land — It's Free →</button>
+  </div>
+</div>
+<footer>
+  <div class="footer-logo">Land<span>IQ</span></div>
+  <div class="footer-text">Indian Land Investment Advisor • Built with Multi-Agent AI • EY GenAI Internship 2026</div>
+</footer>
+
+<script>
+const CORE=new Set(['location','legal','financial','market','bull','bear','due_diligence','senior_consultant']);
+let selAgents=['all'],caveOn=false,selGRMode='none',selCfg=null,cfgOpen=false;
+let EXTERNAL_SERVER='';
+
+// Fetch dynamic external base URL on load
+(async()=>{try{const r=await fetch('/external/base-url');const d=await r.json();EXTERNAL_SERVER=d.external_base||'';}catch(e){EXTERNAL_SERVER='';}})();
+
+const rObs=new IntersectionObserver((es)=>{es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');rObs.unobserve(e.target);}});},{threshold:.15});
+document.querySelectorAll('.reveal').forEach(el=>rObs.observe(el));
+
+const cObs=new IntersectionObserver((es)=>{es.forEach(e=>{
+  if(!e.isIntersecting)return;const el=e.target;cObs.unobserve(el);
+  const target=parseInt(el.dataset.target||'0'),suffix=el.dataset.suffix||'';
+  const dur=1400,t0=performance.now();
+  function tick(t){const p=Math.min((t-t0)/dur,1);const eased=1-Math.pow(1-p,3);el.textContent=Math.round(target*eased).toLocaleString()+suffix;if(p<1)requestAnimationFrame(tick);}
+  requestAnimationFrame(tick);
+});},{threshold:.4});
+document.querySelectorAll('.counter').forEach(el=>cObs.observe(el));
+
+(function(){const layers=document.querySelectorAll('.olayer');if(!layers.length)return;let i=0;setInterval(()=>{layers.forEach(l=>l.classList.remove('glow'));layers[i].classList.add('glow');i=(i+1)%layers.length;},1500);})();
+
+const mObs=new IntersectionObserver((entries)=>{entries.forEach(e=>{if(e.isIntersecting)e.target.querySelectorAll('.metric-fill').forEach(f=>{f.style.width=f.dataset.w+'%';});});},{threshold:.3});
+document.querySelectorAll('.accuracy-metrics').forEach(el=>mObs.observe(el));
+
+(async()=>{try{const r=await fetch('/agents');const d=await r.json();const dyn=(d.agents||[]).filter(a=>!CORE.has(a.name));const total=8+dyn.length;document.getElementById('heroCount').textContent=total;const st=document.getElementById('heroStatAgents');st.dataset.target=total;}catch(e){}})();
+
+function goStep(n){
+  document.querySelectorAll('.step-pane').forEach((p,i)=>p.classList.toggle('active',i+1===n));
+  document.querySelectorAll('.step-tab').forEach((t,i)=>t.classList.toggle('active',i+1===n));
+  if(n===4){loadCfgs();loadDynAgents();}
+}
+
+async function loadDynAgents(){
+  try{
+    const r=await fetch('/agents');const d=await r.json();
+    const dyn=(d.agents||[]).filter(a=>!CORE.has(a.name));
+    const grid=document.getElementById('agentsPick');
+    grid.querySelectorAll('.dyn-ap').forEach(b=>b.remove());
+    document.getElementById('dynNote').style.display=dyn.length?'block':'none';
+    dyn.forEach(a=>{const b=document.createElement('button');b.className='ap-btn dyn-ap';b.innerHTML=`<span class="ai">✨</span>${a.display_name||a.name}`;b.onclick=()=>toggleA(b,a.name);grid.appendChild(b);});
+  }catch(e){}
+}
+
+function toggleA(btn,id){
+  if(id==='all'){selAgents=['all'];document.querySelectorAll('.ap-btn').forEach(b=>b.classList.toggle('sel',b===btn));}
+  else{
+    document.querySelector('.ap-btn:first-child').classList.remove('sel');
+    if(selAgents.includes('all'))selAgents=[];
+    btn.classList.toggle('sel');
+    if(btn.classList.contains('sel')){if(!selAgents.includes(id))selAgents.push(id);}
+    else{selAgents=selAgents.filter(a=>a!==id);}
+    if(!selAgents.length){selAgents=['all'];document.querySelector('.ap-btn:first-child').classList.add('sel');}
+  }
+}
+
+function selGR(mode){
+  selGRMode=mode;
+  ['none','local','api','hf'].forEach(m=>{document.getElementById('gb_'+m).classList.toggle('sel',m===mode);});
+  ['local','api','hf'].forEach(m=>{const el=document.getElementById('gc_'+m);if(el)el.classList.toggle('open',m===mode);});
+}
+
+async function testGR(){
+  const url=document.getElementById('gr_aurl').value.trim();const key=document.getElementById('gr_akey').value.trim();
+  const st=document.getElementById('gs_api');st.className='gr-st info';st.textContent='Testing…';
+  try{const r=await fetch('/guardrails/test',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({endpoint_url:url,api_key:key})});
+    const d=await r.json();st.className=r.ok&&d.success?'gr-st ok':'gr-st err';st.textContent=r.ok&&d.success?'✅ Connected!':'❌ '+(d.detail||'Failed');
+  }catch(e){st.className='gr-st err';st.textContent='❌ '+e.message;}
+}
+
+async function testHF(){
+  const m=document.getElementById('gr_hfm').value.trim();const t=document.getElementById('gr_hft').value.trim();
+  const st=document.getElementById('gs_hf');st.className='gr-st info';st.textContent='Testing HuggingFace…';
+  try{
+    const r=await fetch('/guardrails/test-hf',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model_or_url:m,hf_token:t})});
+    let d;try{d=await r.json();}catch(e){st.className='gr-st err';st.textContent='❌ Non-JSON response';return;}
+    st.className=d.success?'gr-st ok':'gr-st err';st.textContent=d.success?'✅ Connected!':'❌ '+(d.response||d.detail||'Failed');
+  }catch(e){st.className='gr-st err';st.textContent='❌ '+e.message;}
+}
+
+// ─── CONFIG LOADER ──────────────────────────────────────────────────────────
+// ─── CONFIG LOADER (v2 — dual path: server proxy + direct browser fetch) ────
+// ─── CONFIG LOADER (v3 — proxy → direct browser → manual paste) ────────────
+
+const CACHE_KEY='landiq_ext_cfgs';
+const CACHE_DETAIL_KEY='landiq_ext_cfg_detail';
+const MANUAL_KEY='landiq_manual_cfgs';
+
+function _saveCachedDetail(name,detail){
+  try{const m=JSON.parse(localStorage.getItem(CACHE_DETAIL_KEY)||'{}');m[name]=detail;localStorage.setItem(CACHE_DETAIL_KEY,JSON.stringify(m));}catch(e){}
+}
+function _getCachedDetail(name){
+  try{const m=JSON.parse(localStorage.getItem(CACHE_DETAIL_KEY)||'{}');return m[name]||null;}catch(e){return null;}
+}
+
+function _normaliseCfgList(data){
+  let arr=[];
+  if(Array.isArray(data))arr=data;
+  else if(data&&typeof data==='object'){
+    arr=data.configs||data.items||data.data||data.results||[];
+    if(!Array.isArray(arr))arr=(data.full_name||data.config_name||data.name)?[data]:[];
+  }
+  return arr.map(c=>({
+    full_name:c.full_name||c.config_name||c.name||'',
+    source:'external_student_server',
+    _raw:c
+  })).filter(c=>c.full_name);
+}
+
+// Path A: backend proxy → Path B: direct browser fetch
+async function _fetchExtConfigs(){
+  let lastErr='';
+  try{
+    const r=await fetch('/external/configs');
+    const d=await r.json();
+    const list=_normaliseCfgList(d.all_configs&&d.all_configs.length?d.all_configs:d.configs);
+    if(list.length)return {ok:true,via:'backend proxy',list};
+    if(d.error==='DEVTUNNEL_AUTH')return {ok:false,via:'backend',list:[],err:'tunnelauth',msg:d.message||''};
+    lastErr=(d.error||'')+(d.message?(' — '+d.message):'');
+  }catch(e){lastErr='backend: '+e.message;}
+
+  if(EXTERNAL_SERVER){
+    try{
+      const c=new AbortController();const t=setTimeout(()=>c.abort(),8000);
+      const r2=await fetch(EXTERNAL_SERVER.replace(/\/$/,'')+'/configs',{
+        headers:{'Accept':'application/json','X-Tunnel-Skip-Auth-Redirect':'true'},
+        mode:'cors',signal:c.signal
+      });
+      clearTimeout(t);
+      const ct=r2.headers.get('content-type')||'';
+      if(ct.includes('html'))return {ok:false,via:'browser',list:[],err:'tunnelauth',msg:'Tunnel returned a login page'};
+      const list2=_normaliseCfgList(await r2.json());
+      if(list2.length)return {ok:true,via:'direct browser fetch',list:list2};
+      lastErr+=' | direct: replied with 0 configs';
+    }catch(e){lastErr+=' | direct: '+(e.name==='AbortError'?'timed out after 8s':e.message);}
+  }
+  return {ok:false,via:'none',list:[],err:'offline',msg:lastErr};
+}
+
+// ── Path C: manual paste ──
+function _getManualCfgs(){
+  try{return _normaliseCfgList(JSON.parse(localStorage.getItem(MANUAL_KEY)||'[]'));}catch(e){return [];}
+}
+function toggleManualPaste(){
+  const p=document.getElementById('manualPastePanel');
+  if(p)p.style.display=p.style.display==='none'?'block':'none';
+}
+function saveManualCfgs(){
+  const ta=document.getElementById('manualPasteTA');
+  const st=document.getElementById('manualPasteSt');
+  try{
+    const parsed=JSON.parse(ta.value.trim());
+    const list=_normaliseCfgList(parsed);
+    if(!list.length)throw new Error('No configs found — need JSON with full_name/name fields');
+    localStorage.setItem(MANUAL_KEY,JSON.stringify(Array.isArray(parsed)?parsed:(parsed.configs||[parsed])));
+    st.style.color='var(--sage)';st.textContent='✅ Saved '+list.length+' config(s). Reloading…';
+    setTimeout(()=>loadCfgs(),600);
+  }catch(e){st.style.color='var(--red)';st.textContent='❌ '+e.message;}
+}
+function clearManualCfgs(){localStorage.removeItem(MANUAL_KEY);loadCfgs();}
+
+async function updateExtBase(){
+  const inp=document.getElementById('extBaseInput');
+  if(!inp)return;
+  const val=inp.value.trim().replace(/\/$/,'');
+  if(!val){alert('Enter a valid URL');return;}
+  const st=document.getElementById('extBaseStatus');
+  try{
+    const r=await fetch('/external/set-base',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({external_base:val})});
+    const d=await r.json();
+    if(d.success){
+      EXTERNAL_SERVER=val;
+      st.textContent='✅ Saved — reloading configs…';st.style.color='var(--sage)';
+      localStorage.removeItem(CACHE_KEY);
+      setTimeout(()=>loadCfgs(),600);
+    }
+  }catch(e){st.textContent='❌ '+e.message;st.style.color='var(--red)';}
+}
+
+async function diagnoseExt(){
+  const st=document.getElementById('extBaseStatus');
+  st.style.color='var(--muted)';st.textContent='⏳ Testing…';
+  const out=[];
+  try{
+    const hd=await (await fetch('/health')).json();
+    out.push('api.py version → '+(hd.version==='3.2.0'?'✅ 3.2.0 (fixed)':'⚠ '+hd.version+' — OLD FILE. Replace api.py and restart.'));
+  }catch(e){out.push('api.py version → ❌ '+e.message);}
+  try{
+    const d=await (await fetch('/external/configs')).json();
+    out.push('Backend proxy → '+(d.error?('❌ '+d.error+' — '+(d.message||'')):('✅ '+(d.count||0)+' configs')));
+  }catch(e){out.push('Backend proxy → ❌ '+e.message);}
+  if(EXTERNAL_SERVER){
+    try{
+      const c=new AbortController();const t=setTimeout(()=>c.abort(),8000);
+      const r2=await fetch(EXTERNAL_SERVER.replace(/\/$/,'')+'/configs',{headers:{'Accept':'application/json'},mode:'cors',signal:c.signal});
+      clearTimeout(t);
+      const ct=r2.headers.get('content-type')||'';
+      if(ct.includes('html'))out.push('Direct browser → ⚠ HTML login page — set Port Visibility → Public');
+      else out.push('Direct browser → ✅ '+_normaliseCfgList(await r2.json()).length+' configs (HTTP '+r2.status+')');
+    }catch(e){out.push('Direct browser → ❌ '+(e.name==='AbortError'?'timed out after 8s — tunnel dead or blocked':e.message+' — CORS or unreachable'));}
+  }
+  const man=_getManualCfgs();
+  out.push('Manual paste → '+(man.length?('✅ '+man.length+' config(s) stored'):'— none stored'));
+  st.innerHTML=out.join('<br>');
+}
+
+async function loadCfgs(){
+  const box=document.getElementById('cfgBox');
+  try{const bd=await (await fetch('/external/base-url')).json();EXTERNAL_SERVER=bd.external_base||EXTERNAL_SERVER;}catch(e){}
+
+  const urlEditor=`
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;padding:10px 14px;background:var(--parch);border:1.5px solid var(--stone);border-radius:12px;flex-wrap:wrap">
+      <span style="font-size:11px;color:var(--muted);white-space:nowrap;font-weight:600">🔗 Server URL</span>
+      <input id="extBaseInput" value="${EXTERNAL_SERVER}" style="flex:1;min-width:180px;padding:7px 10px;border:1.5px solid var(--stone);border-radius:8px;font-size:12px;font-family:'JetBrains Mono',monospace;background:var(--white);color:var(--ink);outline:none;" placeholder="https://xxxx-8001.devtunnels.ms"/>
+      <button onclick="updateExtBase()" style="padding:7px 16px;background:var(--forest);color:white;border:none;border-radius:100px;font-size:11px;font-weight:700;cursor:pointer">Update</button>
+      <button onclick="diagnoseExt()" style="padding:7px 14px;background:transparent;border:1.5px solid var(--sage);color:var(--sage);border-radius:100px;font-size:11px;font-weight:700;cursor:pointer">Test</button>
+      <button onclick="toggleManualPaste()" style="padding:7px 14px;background:transparent;border:1.5px dashed var(--stone);color:var(--muted);border-radius:100px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">📋 Paste JSON</button>
+    </div>
+    <div id="manualPastePanel" style="display:none;margin-bottom:10px;padding:12px 14px;background:var(--parch);border:1.5px solid var(--stone);border-radius:12px">
+      <div style="font-size:11px;color:var(--muted);margin-bottom:6px;line-height:1.6">Tunnel down? Ask the student to open their <b>/configs</b> in a browser, copy the JSON, paste it here.</div>
+      <textarea id="manualPasteTA" rows="4" placeholder='[{"full_name":"hello_llm","operations":{"chat":[{"litellm_model":"groq/llama-3.1-8b-instant"}]},"restrictions":{"rpm":60,"tpr":4096}}]' style="width:100%;padding:10px;border:1.5px solid var(--stone);border-radius:8px;font-size:11px;font-family:'JetBrains Mono',monospace;background:var(--white);color:var(--ink);outline:none;resize:vertical"></textarea>
+      <div style="display:flex;gap:8px;margin-top:8px;align-items:center;flex-wrap:wrap">
+        <button onclick="saveManualCfgs()" style="padding:7px 18px;background:var(--forest);color:white;border:none;border-radius:100px;font-size:11px;font-weight:700;cursor:pointer">Save configs</button>
+        <button onclick="clearManualCfgs()" style="padding:7px 14px;background:transparent;border:1.5px solid var(--stone);color:var(--muted);border-radius:100px;font-size:11px;font-weight:600;cursor:pointer">Clear</button>
+        <span id="manualPasteSt" style="font-size:11px"></span>
+      </div>
+    </div>
+    <div id="extBaseStatus" style="font-size:11px;margin-bottom:8px;line-height:1.8;font-family:'JetBrains Mono',monospace"></div>`;
+
+  try{
+    let cfgs=await (await fetch('/configs/active')).json();
+    if(!Array.isArray(cfgs))cfgs=[];
+
+    const ext=await _fetchExtConfigs();
+    let extOnline=false,extError='',extMsg='',extVia='';
+    if(ext.ok){
+      extOnline=true;extVia=ext.via;
+      cfgs=[...cfgs,...ext.list];
+      try{localStorage.setItem(CACHE_KEY,JSON.stringify(ext.list));}catch(e){}
+    }else{extError=ext.err||'offline';extMsg=ext.msg||'';}
+
+    const manual=_getManualCfgs();
+    let usedManual=false;
+    if(!extOnline&&manual.length){
+      cfgs=[...cfgs,...manual.map(c=>({...c,manual:true}))];
+      usedManual=true;
+    }
+
+    let cached=[];
+    if(!extOnline&&!usedManual){
+      try{cached=JSON.parse(localStorage.getItem(CACHE_KEY)||'[]');}catch(e){}
+      if(cached.length)cfgs=[...cfgs,...cached.map(c=>({...c,stale:true}))];
+    }
+
+    if(!cfgs.length){
+      box.innerHTML=urlEditor+'<div style="text-align:center;padding:10px;font-size:12px">No active configs. <a href="/static/llm-setup.html" style="color:var(--sage);font-weight:600">Configure →</a></div>';
+      return;
+    }
+
+    selCfg=cfgs[0].full_name;
+    document.getElementById('cfgBadge').style.display='inline';
+    document.getElementById('cfgName').textContent=selCfg;
+    document.getElementById('cfgTxt').textContent='Config:';
+    window._extCfgs=new Set(cfgs.filter(c=>c.source==='external_student_server').map(c=>c.full_name));
+    window._staleCfgs=new Set(cfgs.filter(c=>c.stale).map(c=>c.full_name));
+    window._manualCfgs=new Set(cfgs.filter(c=>c.manual).map(c=>c.full_name));
+    window._extRawMap={};
+    cfgs.filter(c=>c._raw).forEach(c=>{window._extRawMap[c.full_name]=c._raw;});
+
+    let statusBar='';
+    if(extOnline){
+      statusBar=`<div style="font-size:10px;color:var(--sage);margin-bottom:8px;display:flex;align-items:center;gap:6px"><span style="width:7px;height:7px;background:var(--sage);border-radius:50%"></span> Student server online via ${extVia} · ${EXTERNAL_SERVER}</div>`;
+    } else if(usedManual){
+      statusBar=`<div style="font-size:10px;color:#856404;margin-bottom:8px;line-height:1.7"><b>📋 Using pasted configs</b> (${manual.length}) — tunnel unreachable: ${extMsg||'unknown'}</div>`;
+    } else if(extError==='tunnelauth'){
+      statusBar=`<div style="font-size:10px;color:#856404;margin-bottom:8px">⚠ Tunnel auth — VS Code → PORTS → right-click 8001 → Port Visibility → Public</div>`;
+    } else if(cached.length){
+      statusBar=`<div style="font-size:10px;color:#856404;margin-bottom:8px">⚠ Offline — ${cached.length} cached config(s). Reason: ${extMsg||'unknown'}</div>`;
+    } else {
+      statusBar=`<div style="font-size:10px;color:var(--red);margin-bottom:8px;line-height:1.7">❌ Student configs unreachable.<br><b>Error:</b> ${extMsg||'unknown'}<br>Open the URL in a browser tab to confirm it's alive — devtunnel URLs change every session. Or use <b>📋 Paste JSON</b>.</div>`;
+    }
+
+    box.innerHTML=urlEditor+statusBar+`<select id="cfgSel" style="width:100%;padding:10px 14px;border:1.5px solid var(--stone);border-radius:10px;font-size:13px;background:var(--white)" onchange="onCfgChange()">${cfgs.map(c=>`<option value="${c.full_name}">${c.full_name}${c.manual?' 📋 (pasted)':(c.source==='external_student_server'?(c.stale?' 🌐 (cached)':' 🌐'):'')}</option>`).join('')}</select>`;
+    setTimeout(()=>onCfgChange(),250);
+  }catch(e){box.innerHTML=urlEditor+'<div style="color:var(--red);font-size:12px;padding:8px">Could not load configs: '+e.message+'</div>';}
+}
+
+function _buildChainHTML(cfg,d){
+  const ops=(cfg&&cfg.operations)||(d&&d.operations)||{};
+  const chatOps=ops.chat||ops.completion||ops.completions||[];
+  if(!chatOps.length)return '<span style="color:rgba(255,255,255,.4)">No chat operations configured</span>';
+  return chatOps.map((m,i)=>`<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.06)"><span style="color:var(--gold-lt);min-width:70px">Priority ${i+1}:</span><b style="color:white">${m.litellm_model||m.model||'?'}</b><span style="color:rgba(255,255,255,.35);font-size:10px">[${m.api_key_env||'key set'}]</span></div>`).join('');
+}
+
+function _buildRestrictionsHTML(cfg,d){
+  const rst=(cfg&&cfg.restrictions)||(d&&d.restrictions)||{};
+  const gr=(cfg&&cfg.guardrails)||(d&&d.guardrails)||{};
+  const items=[];
+  if(rst.rpm!=null)items.push(`RPM: <b>${rst.rpm}</b>`);
+  if(rst.tpr!=null)items.push(`Max tokens/req: <b>${rst.tpr}</b>`);
+  if(rst.tpm!=null)items.push(`TPM: <b>${rst.tpm}</b>`);
+  if(gr.pii_masking)items.push(`✓ PII Masking`);
+  if(gr.profanity_filter)items.push(`✓ Profanity Filter`);
+  return items.length?`<div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.08);color:rgba(255,255,255,.6)">${items.join(' &nbsp;·&nbsp; ')}</div>`:'';
+}
+
+async function onCfgChange(){
+  selCfg=document.getElementById('cfgSel')?.value;
+  if(!selCfg)return;
+  document.getElementById('cfgName').textContent=selCfg;
+  document.getElementById('cfgTxt').textContent='Config:';
+  const isExt=(window._extCfgs||new Set()).has(selCfg);
+  const isStale=(window._staleCfgs||new Set()).has(selCfg);
+  const isManual=(window._manualCfgs||new Set()).has(selCfg);
+  const old=document.getElementById('cfgDetail');
+  if(old)old.remove();
+  const dd=document.createElement('div');
+  dd.id='cfgDetail';
+  dd.style.cssText='margin-top:10px;padding:12px 16px;background:var(--forest);border-radius:10px;font-size:11px;color:rgba(255,255,255,.8);font-family:"JetBrains Mono",monospace;line-height:1.9';
+  document.getElementById('cfgBox').appendChild(dd);
+
+  if(isExt){
+    const raw=(window._extRawMap||{})[selCfg]||_getCachedDetail(selCfg);
+    if(raw){
+      _saveCachedDetail(selCfg,raw);
+      const badge=isManual?'<span style="background:#856404;color:white;padding:2px 10px;border-radius:100px;font-size:9px">PASTED</span>'
+        :isStale?'<span style="background:#856404;color:white;padding:2px 10px;border-radius:100px;font-size:9px">CACHED</span>'
+        :'<span style="background:rgba(74,222,128,.15);color:#4ade80;border:1px solid #4ade80;padding:2px 10px;border-radius:100px;font-size:9px">LIVE ✓</span>';
+      dd.innerHTML=`
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+          <span style="color:#4ade80;font-weight:700">🌐 ${selCfg}</span>${badge}
+        </div>
+        <div style="color:rgba(255,255,255,.4);font-size:10px;margin-bottom:10px">${EXTERNAL_SERVER||'source: pasted JSON'}</div>
+        <div style="font-weight:700;color:rgba(255,255,255,.9);margin-bottom:6px">Model Priority Chain:</div>
+        ${_buildChainHTML(raw,raw)}${_buildRestrictionsHTML(raw,raw)}`;
+      return;
+    }
+    dd.innerHTML='<span style="color:var(--gold-lt)">⏳ Fetching…</span>';
+    try{
+      const d=await (await fetch('/external/config/'+selCfg)).json();
+      if(d.error){dd.innerHTML=`<span style="color:#f5a0a0">⚠ ${d.detail||d.error}</span>`;return;}
+      const cfg=d.config||d;_saveCachedDetail(selCfg,cfg);
+      dd.innerHTML=`<div style="color:#4ade80;font-weight:700;margin-bottom:8px">🌐 ${selCfg}</div>
+        <div style="font-weight:700;color:rgba(255,255,255,.9);margin-bottom:6px">Model Priority Chain:</div>
+        ${_buildChainHTML(cfg,d)}${_buildRestrictionsHTML(cfg,d)}`;
+    }catch(e){dd.innerHTML=`<span style="color:#f5a0a0">❌ ${e.message}</span>`;}
+  } else {
+    dd.innerHTML='<span style="color:var(--gold-lt)">⏳ Loading local config…</span>';
+    try{
+      const d=await (await fetch('/configs/'+selCfg)).json();
+      dd.innerHTML=`<div style="color:var(--gold);font-weight:700;margin-bottom:8px">⚙️ ${selCfg} — Local Config</div>
+        <div style="font-weight:700;color:rgba(255,255,255,.9);margin-bottom:6px">Model Priority Chain:</div>
+        ${_buildChainHTML(d,d)}${_buildRestrictionsHTML(d,d)}`;
+    }catch(e){dd.innerHTML='<span style="color:rgba(255,255,255,.4)">⚙️ Local config active</span>';}
+  }
+}
+function toggleCfgPicker(){cfgOpen=!cfgOpen;document.getElementById('cfgPick').classList.toggle('open',cfgOpen);document.getElementById('btnCfg').textContent=cfgOpen?'✕ Close':'📚 Choose Config';}
+function toggleLoan(cb){document.getElementById('loanF').style.display=cb.checked?'grid':'none';}
+function toggleCave(cb){
+  caveOn=cb.checked;const lv=document.getElementById('caveLevel').value;
+  const st=document.getElementById('caveSt');
+  if(caveOn){st.innerHTML=`🪨 Caveman <b>${lv.toUpperCase()}</b> — saves ${{lite:'~40%',full:'~65%',ultra:'~80%'}[lv]} tokens`;st.style.color='var(--sage)';}
+  else{st.innerHTML='🧠 Normal Mode — full detail responses';st.style.color='var(--muted)';}
+}
+
+function openModal(){_clearModal();document.getElementById('modalOv').classList.add('show');switchTab('type');}
+function closeModal(){document.getElementById('modalOv').classList.remove('show');}
+function switchTab(t){['type','url','file'].forEach(x=>{document.getElementById('at_'+x).classList.toggle('sel',x===t);document.getElementById('ap_'+x).classList.toggle('sel',x===t);});}
+function _clearModal(){
+  ['ca_name','ca_dname','ca_desc','ca_role','ca_skill','ca_url'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('ca_temp').value='0.3';document.getElementById('ca_layer').value='2';
+  document.getElementById('modal_st').className='modal-st';document.getElementById('pfnNote').classList.remove('show');
+  document.getElementById('ca_save').disabled=false;document.getElementById('ca_save').textContent='Create Agent →';
+}
+function _prefill(d){
+  if(d.name)document.getElementById('ca_name').value=d.name;
+  if(d.display_name)document.getElementById('ca_dname').value=d.display_name;
+  if(d.description)document.getElementById('ca_desc').value=d.description;
+  if(d.capabilities)document.getElementById('ca_skill').value=d.capabilities;
+  const role=[d.description,d.capabilities].filter(Boolean).join('\n\n');
+  if(role)document.getElementById('ca_role').value=role;
+  document.getElementById('pfnNote').classList.add('show');
+}
+function _mst(id,msg,t){const el=document.getElementById(id);el.className='modal-st '+(t||'');el.style.display=msg?'block':'none';el.textContent=msg;}
+async function fetchURL(){
+  const url=document.getElementById('ca_url').value.trim();
+  try{const r=await fetch('/agents/preview-url',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url})});
+    const d=await r.json();if(!r.ok){_mst('url_st','❌ '+(d.detail||'Failed'),'err');return;}_prefill(d);_mst('url_st','✅ Fields auto-filled!','ok');
+  }catch(e){_mst('url_st','❌ '+e.message,'err');}
+}
+async function handleFile(inp){
+  const file=inp.files[0];if(!file)return;document.getElementById('fname').textContent='📎 '+file.name;
+  const fd=new FormData();fd.append('file',file);
+  try{const r=await fetch('/agents/preview-file',{method:'POST',body:fd});const d=await r.json();
+    if(!r.ok){_mst('file_st','❌ '+(d.detail||'Failed'),'err');return;}_prefill(d);_mst('file_st','✅ Parsed!','ok');
+  }catch(e){_mst('file_st','❌ '+e.message,'err');}
+}
+async function saveAgent(){
+  const name=document.getElementById('ca_name').value.trim().replace(/\s+/g,'_').toLowerCase();
+  const dname=document.getElementById('ca_dname').value.trim();
+  const role=document.getElementById('ca_role').value.trim();
+  if(!name||!dname||!role){_mst('modal_st','Agent ID, Display Name, and Role are required.','err');return;}
+  const btn=document.getElementById('ca_save');btn.disabled=true;btn.textContent='Creating…';
+  try{const r=await fetch('/agents',{method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({name,display_name:dname,description:document.getElementById('ca_desc').value.trim()||dname,
+      temperature:parseFloat(document.getElementById('ca_temp').value)||0.3,layer:parseInt(document.getElementById('ca_layer').value)||2,
+      output_fields:[{name:'summary',type:'str',description:'Summary'},{name:'risk_level',type:'str',description:'Risk level'},{name:'key_findings',type:'str',description:'Key findings'},{name:'recommendation',type:'str',description:'Recommendation'}],
+      role_text:role,skill_text:document.getElementById('ca_skill').value.trim()||'General analysis'})});
+    const d=await r.json();
+    if(!r.ok){_mst('modal_st','❌ '+(d.detail||'Failed'),'err');btn.disabled=false;btn.textContent='Create Agent →';return;}
+    _mst('modal_st',`✅ "${dname}" created!`,'ok');btn.textContent='Created ✓';
+    await loadDynAgents();setTimeout(closeModal,2000);
+  }catch(e){_mst('modal_st','❌ '+e.message,'err');btn.disabled=false;btn.textContent='Create Agent →';}
+}
+
+async function submitAnalysis(){
+  const state=document.getElementById('f_state').value.trim();
+  const city=document.getElementById('f_city').value.trim();
+  const area=document.getElementById('f_area').value.trim();
+  const size=parseFloat(document.getElementById('f_size').value);
+  const budget=parseFloat(document.getElementById('f_budget').value);
+  if(!state||!city||!area){showErr('Fill in State, City, and Area in Step 1.');return;}
+  if(!size||size<=0){showErr('Enter a valid Land Size in Step 2.');return;}
+  if(!budget||budget<=0){showErr('Enter a Total Budget in Step 3.');return;}
+  document.getElementById('errBox').style.display='none';
+  try{
+    const gr=await fetch('/guardrails/deberta/run',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:`${area}, ${city}, ${state}`,pii_enabled:true,pii_action:"MASK",safety_enabled:true})});
+    const gd=await gr.json();
+    // Only hard-block if server is online AND explicitly blocked harmful content
+    // If server offline (gd.error) — allow analysis to continue, just warn
+    if(gd.error&&gd.error.includes('offline')){
+      console.warn('Guardrail server offline, continuing without guardrail check');
+    } else if(gd.allowed===false&&gd.blocked_reason){
+      showErr('🚫 Blocked by Guardrail: '+gd.blocked_reason);return;
+    }
+    if(gd.pii_found&&gd.pii_found.length>0){
+      let b=document.getElementById('gr-banner');
+      if(!b){b=document.createElement('div');b.id='gr-banner';b.style.cssText='background:#fff3cd;border:1px solid #ffc107;padding:10px 16px;margin-bottom:14px;border-radius:10px;font-size:13px;color:#856404;';const w=document.querySelector('.results-wrap');if(w)w.insertBefore(b,w.firstChild);}
+      b.textContent='⚠️ PII Masked: '+gd.pii_found.map(p=>p.type).join(', ')+' — cleaned before agents';b.style.display='block';
+    }
+  }catch(e){console.warn('Guardrail offline, continuing:',e.message);}
+  const payload={state,city,area,pincode:document.getElementById('f_pincode').value.trim(),
+    land_size:size,land_unit:document.getElementById('f_unit').value,land_type:document.getElementById('f_ltype').value,
+    has_title_deed:document.getElementById('f_deed').checked,total_budget:budget,
+    construction_budget:parseFloat(document.getElementById('f_constr').value)||0,
+    purpose:document.getElementById('f_purpose').value,timeline_years:parseInt(document.getElementById('f_timeline').value)||5,
+    monthly_income_expectation:parseFloat(document.getElementById('f_income').value)||0,
+    risk_tolerance:document.getElementById('f_risk').value,taking_loan:document.getElementById('f_loan').checked,
+    loan_amount:parseFloat(document.getElementById('f_lamt')?.value)||0,
+    loan_interest_rate:parseFloat(document.getElementById('f_lrate')?.value)||0,
+    selected_agents:selAgents,caveman_mode:caveOn,caveman_level:document.getElementById('caveLevel').value,
+    selected_config:(document.getElementById('cfgSel')?.value)||selCfg||null,guardrail_mode:selGRMode,
+    guardrail_config:{local_path:document.getElementById('gr_lpath')?.value||'',api_url:document.getElementById('gr_aurl')?.value||'',api_key:document.getElementById('gr_akey')?.value||'',hf_model:document.getElementById('gr_hfm')?.value||'',hf_token:document.getElementById('gr_hft')?.value||''}};
+  showLoad();
+  try{const r=await fetch('/analyse',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    const d=await r.json();hideLoad();if(!r.ok){showErr(d.detail||'Analysis failed.');return;}showResults(d,payload);
+  }catch(e){hideLoad();showErr('Could not connect to server.');}
+}
+function showErr(m){const b=document.getElementById('errBox');b.textContent=m;b.style.display='block';}
+function showLoad(){
+  const msgs=['Calling LLM Orchestrator…','Planning agent layers…','Running agents in parallel…','Synthesising recommendation…'];
+  const subs=['plan=llm deciding order…','Layer 1 executing…','Layer 2 executing…','Senior Consultant synthesising…'];
+  let i=0;document.getElementById('lt').textContent=msgs[0];document.getElementById('ls').textContent=subs[0];
+  window._li=setInterval(()=>{i=(i+1)%4;document.getElementById('lt').textContent=msgs[i];document.getElementById('ls').textContent=subs[i];},2500);
+  document.getElementById('loadOv').classList.add('show');
+}
+function hideLoad(){clearInterval(window._li);document.getElementById('loadOv').classList.remove('show');}
+
+// ── AUTO ROWS — extracts displayable rows from any agent output ──
+function autoRows(d,max){if(!d||typeof d!=='object')return[];var skip={'summary':1,'agent_name':1,'raw':1,'error':1,'executive_summary':1,'next_steps':1,'confidence_level':1,'financial_verdict':1};return Object.entries(d).filter(function(e){return!skip[e[0]]&&e[1]!=null&&e[1]!=='';}).slice(0,max||6).map(function(e){var k=e[0],v=e[1];var label=k.replace(/_/g,' ').replace(/\b\w/g,function(c){return c.toUpperCase();});var val=v;if(Array.isArray(v)){if(v.length&&typeof v[0]==='string')val=v.slice(0,3).join(', ')+(v.length>3?' …':'');else val=v.length+' items';}else if(typeof v==='object')val=JSON.stringify(v).slice(0,100);else val=String(v);var lv=val.toLowerCase();if(k.indexOf('risk')>=0||k.indexOf('level')>=0){if(lv.indexOf('low')>=0)val='<span class="risk-b risk-low">'+val+'</span>';else if(lv.indexOf('high')>=0||lv.indexOf('avoid')>=0)val='<span class="risk-b risk-high">'+val+'</span>';else if(lv.indexOf('med')>=0||lv.indexOf('mod')>=0)val='<span class="risk-b risk-med">'+val+'</span>';}return[label,val];});}
+
+function showResults(data,payload){
+  document.getElementById('mainForm').style.display='none';
+  document.getElementById('resultsSection').style.display='block';
+  var _area=payload.area&&payload.area!=='null'?payload.area:payload.city;
+  document.getElementById('resTitle').textContent=payload.land_size+' '+payload.land_unit+' \u2014 '+_area+', '+payload.city;
+  document.getElementById('resSub').textContent=(data.completed_agents||[]).length+' agents \u2022 plan=llm \u2022 '+(data.llm_configuration||'default')+' \u2022 guardrail: '+selGRMode;
+  document.getElementById('modBadge').textContent='\uD83E\uDD16 '+(data.llm_configuration||'default');
+  if(data.mlflow_logged)document.getElementById('mlBadge').style.display='inline-flex';
+  buildOrch(data);
+  var grid=document.getElementById('resGrid');var cards=[];
+  var agentMap=[['📍 Location Intelligence','location',data.location],['⚖️ Legal & Title','legal',data.legal],['💰 Financial ROI','financial',data.financial],['📊 Market Intel','market',data.market],['🐂 Bull Case','bull',data.bull_case],['🐻 Bear Case','bear',data.bear_case],['🔍 Due Diligence','due_diligence',data.due_diligence]];
+  agentMap.forEach(function(item){var title=item[0],d=item[2];if(!d)return;cards.push(rc(title,false,autoRows(d,6),d.summary||d.executive_summary||''));});
+  Object.entries(data.dynamic_agents||{}).forEach(function(entry){var k=entry[0],v=entry[1];if(!v)return;var n=k.replace(/_/g,' ').replace(/\b\w/g,function(c){return c.toUpperCase();});cards.push(rc('\u2728 '+n,true,autoRows(v,6),v.summary||''));});
+  grid.innerHTML=cards.join('');
+  if(data.recommendation){document.getElementById('recCard').style.display='';var vc=document.getElementById('verdictChip');var v=(data.recommendation.final_verdict||data.recommendation.verdict||'HOLD').toUpperCase();vc.textContent=v;var isA=v.indexOf('AVOID')>=0||v.indexOf('DO NOT')>=0;var isB=v.indexOf('STRONGLY')>=0||(v.indexOf('RECOMMEND')>=0&&!isA)||v==='BUY'||v.indexOf('BUY')>=0;vc.className='verdict '+(isA?'v-avoid':isB?'v-buy':'v-hold');document.getElementById('recSummary').textContent=data.recommendation.executive_summary||data.recommendation.summary||'';var ns=(data.recommendation.next_steps||[]).slice(0,5).map(function(s){return '<li style="margin-bottom:5px">'+s+'</li>';}).join('');document.getElementById('recDetails').innerHTML='<div class="ri"><span class="ri-k">Confidence</span><span class="ri-v">'+(data.recommendation.confidence_level||'-')+'</span></div><div class="ri"><span class="ri-k">Financial Verdict</span><span class="ri-v">'+(data.recommendation.financial_verdict||'-')+'</span></div>'+(ns?'<ul style="padding-left:18px;font-size:13px;line-height:1.9;margin-top:14px;color:var(--muted)">'+ns+'</ul>':'');}
+  buildTok(data,payload);
+  document.getElementById('resultsSection').scrollIntoView({behavior:'smooth'});
+}
+
+function buildOrch(data){
+  var panel=document.getElementById('orchPanel');var completed=data.completed_agents||[];
+  if(!completed.length){panel.style.display='none';return;}panel.style.display='block';
+  var layers=[];var op=data.orch_plan;
+  if(op&&op.layers&&op.layers.length){layers=op.layers;}
+  else{var l1=[],l2=[],l3=[],l4=[];completed.forEach(function(a){var k=toKey(a);if(k==='senior_consultant')l4.push(k);else if(k==='due_diligence')l3.push(k);else if(k==='bull'||k==='bear')l2.push(k);else l1.push(k);});if(l1.length)layers.push(l1);if(l2.length)layers.push(l2);if(l3.length)layers.push(l3);if(l4.length)layers.push(l4);if(!layers.length)layers=[completed.map(toKey)];}
+  document.getElementById('orchBdg').textContent='PLAN='+(op&&op.source?op.source.toUpperCase():'LLM');
+  document.getElementById('orchLayers').innerHTML=layers.map(function(agents,i){var pills=agents.map(function(n){var isDyn=!CORE.has(n);return '<span class="lpill '+(isDyn?'dyn':'core')+'">'+(isDyn?'\u2728 ':'\u2713 ')+n.replace(/_/g,' ')+'</span>';}).join('');return '<div class="orch-lrow"><span class="lnum">Layer '+(i+1)+'</span><div class="lpills">'+pills+'</div></div>'+(i<layers.length-1?'<div class="larrow">\u2193</div>':'');}).join('');
+  var tr=data.token_report||{};var timing=data.timing||{};var durStr=_dur(tr)||(timing.total_seconds?timing.total_seconds+'s':'\u2014');
+  document.getElementById('orchFtr').innerHTML='<span class="ostat">Agents: <b>'+completed.length+'</b></span><span class="ostat">Layers: <b>'+layers.length+'</b></span>'+(Object.keys(data.dynamic_agents||{}).length?'<span class="ostat">Dynamic: <b>'+Object.keys(data.dynamic_agents).length+' \u2728</b></span>':'')+'<span class="ostat">Tokens: <b>'+(tr.total_tokens?Number(tr.total_tokens).toLocaleString():'\u2014')+'</b></span><span class="ostat">Duration: <b>'+durStr+'</b></span>'+(tr.estimated_cost_usd?'<span class="ostat">Cost: <b>$'+Number(tr.estimated_cost_usd).toFixed(4)+'</b></span>':'');
+}
+
+function buildTok(data,payload){
+  var tr=data.token_report||{};document.getElementById('tokBox').style.display='block';
+  var it=_n(tr,'input_tokens','prompt_tokens'),ot=_n(tr,'output_tokens','completion_tokens'),tt=_n(tr,'total_tokens')||(it+ot);
+  var dur=_dur(tr),cost=_n(tr,'estimated_cost_usd','cost'),calls=_n(tr,'total_llm_calls','llm_calls')||(data.completed_agents||[]).length;
+  var timing=data.timing||{};if(!dur&&timing.total_seconds)dur=timing.total_seconds+'s';
+  document.getElementById('modBadge').textContent='\uD83E\uDD16 '+(data.llm_configuration||'default');
+  document.getElementById('tsGrid').innerHTML=[['Input Tokens',it>0?it.toLocaleString():'\u2014'],['Output Tokens',ot>0?ot.toLocaleString():'\u2014'],['Total Tokens',tt>0?tt.toLocaleString():'\u2014'],['Duration',dur||'\u2014'],['Est. Cost',cost>0?'$'+cost.toFixed(4):'\u2014'],['LLM Calls',calls||'\u2014'],['Start',timing.start_time||'\u2014'],['End',timing.end_time||'\u2014'],['Guardrail',selGRMode.toUpperCase()]].map(function(item){return '<div class="ts"><div class="v">'+item[1]+'</div><div class="l">'+item[0]+'</div></div>';}).join('');
+  var cbd=tr.cost_breakdown||{};var bars='';
+  if(cbd.input_cost_usd||cbd.output_cost_usd){bars+='<div class="cb-row"><span class="cb-lbl">\uD83D\uDCB5 Input Cost</span><div class="cb-track"><div class="cb-fill cb-g" style="width:'+(it/(tt||1)*100)+'%"></div></div><span class="cb-saved">$'+(cbd.input_cost_usd||0).toFixed(6)+'</span></div>';bars+='<div class="cb-row"><span class="cb-lbl">\uD83D\uDCB5 Output Cost</span><div class="cb-track"><div class="cb-fill cb-gold" style="width:'+(ot/(tt||1)*100)+'%"></div></div><span class="cb-saved">$'+(cbd.output_cost_usd||0).toFixed(6)+'</span></div>';}
+  if(data.caveman_mode){var cs=tr.caveman_stats||null;var lv=data.caveman_level||'full';var pct=cs&&cs.savings_pct?cs.savings_pct:{lite:40,full:65,ultra:80}[lv]||65;bars+='<div class="cb-row"><span class="cb-lbl">\uD83E\uDEA8 Caveman '+lv.toUpperCase()+'</span><div class="cb-track"><div class="cb-fill cb-gold" style="width:'+Math.min(pct,100)+'%"></div></div><span class="cb-saved">~'+parseFloat(pct).toFixed(0)+'% saved</span></div>';}
+  var ts=tr.toon_stats||null;if(ts&&ts.savings_pct!=null){bars+='<div class="cb-row"><span class="cb-lbl">\uD83C\uDF33 TOON</span><div class="cb-track"><div class="cb-fill cb-g" style="width:'+Math.min(ts.savings_pct,100)+'%"></div></div><span class="cb-saved">'+(ts.savings_tokens||0).toLocaleString()+' ('+parseFloat(ts.savings_pct).toFixed(1)+'%)</span></div>';}
+  document.getElementById('cmpBars').innerHTML=bars;
+  var log='';var perAgent=tr.per_agent_log||tr.per_call_log||tr.call_log||[];
+  if(perAgent.length){perAgent.forEach(function(a){var isDyn=!CORE.has(toKey(a.agent||''));log+=(a.agent||'?').padEnd(28)+' IN='+String(a.input_tokens||0).padStart(6)+'  OUT='+String(a.output_tokens||0).padStart(5)+'  TOTAL='+String(a.total_tokens||0).padStart(6)+(isDyn?' \u2728':'')+'\n';});}
+  document.getElementById('tokPre').textContent='Duration       : '+(dur||'\u2014')+'\nLLM Calls      : '+(calls||'\u2014')+'\nInput Tokens   : '+(it>0?it.toLocaleString():'\u2014')+'\nOutput Tokens  : '+(ot>0?ot.toLocaleString():'\u2014')+'\nTotal Tokens   : '+(tt>0?tt.toLocaleString():'\u2014')+'\nEst. Cost      : '+(cost>0?'$'+cost.toFixed(6):'\u2014')+'\n'+(cbd.input_cost_usd?'  Input Cost   : $'+cbd.input_cost_usd.toFixed(6)+'\n':'')+(cbd.output_cost_usd?'  Output Cost  : $'+cbd.output_cost_usd.toFixed(6)+'\n':'')+'Config         : '+(data.llm_configuration||'default')+'\nGuardrail      : '+selGRMode.toUpperCase()+'\nMLflow Logged  : '+(data.mlflow_logged?'Yes':'\u2014')+'\n'+(timing.start_time?'Start Time     : '+timing.start_time+'\n':'')+(timing.end_time?'End Time       : '+timing.end_time+'\n':'')+(log?'\n\u2500\u2500 Per Agent \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\n'+log:'');
+}
+
+
+
+
+// == RESTORED MISSING FUNCTIONS =============================================
+
+function _n(obj){for(var i=1;i<arguments.length;i++){var v=obj[arguments[i]];if(v!=null&&v!==''&&!isNaN(v))return Number(v);}return 0;}
+function _dur(tr){if(tr.session_duration_seconds)return tr.session_duration_seconds+'s';if(tr.duration_seconds)return tr.duration_seconds+'s';if(tr.duration)return tr.duration;return '';}
+
+function toKey(name){
+  if(!name)return '';
+  return name.toLowerCase().replace(/\s*agent\s*/gi,'').replace(/\s*intelligence\s*/gi,'')
+    .replace(/\s*&\s*|\s+and\s+/gi,'_').replace(/\s*case\s*/gi,'')
+    .replace(/\s*roi\s*/gi,'').replace(/\s*senior\s*/gi,'senior_')
+    .replace(/\s+/g,'_').replace(/_+/g,'_').replace(/^_|_$/g,'');
+}
+
+function rc(title,isDyn,rows,summary){
+  var cls=isDyn?'rc dyn':'rc';var badge=isDyn?'<span class="dyn-bdg">NEW</span>':'';
+  var html='<div class="'+cls+'"><div class="rc-ttl">'+title+' '+badge+'</div>';
+  rows.forEach(function(r){html+='<div class="ri"><span class="ri-k">'+r[0]+'</span><span class="ri-v">'+r[1]+'</span></div>';});
+  if(summary)html+='<div style="margin-top:12px;font-size:12px;color:var(--muted);line-height:1.7;border-top:1px solid var(--stone);padding-top:10px">'+summary+'</div>';
+  html+='</div>';return html;
+}
+
+function resetForm(){
+  document.getElementById('resultsSection').style.display='none';
+  document.getElementById('mainForm').style.display='';
+  var grb=document.getElementById('gr-banner');if(grb)grb.style.display='none';
+  document.getElementById('mainForm').scrollIntoView({behavior:'smooth'});goStep(1);
+}
+
+async function smartFill(){
+  var inp=document.getElementById('smartInput'),btn=document.getElementById('btnSmart'),st=document.getElementById('smartStatus');
+  var text=inp.value.trim();
+  if(!text){st.className='smart-status err';st.textContent='Type a description first.';return;}
+  btn.disabled=true;btn.textContent='\u23F3 Parsing\u2026';
+  st.className='smart-status info';st.textContent='Sending to LLM for parsing\u2026';
+  try{
+    var cfg=document.getElementById('cfgSel')?document.getElementById('cfgSel').value:null;
+    var r=await fetch('/parse-prompt',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt:text,selected_config:cfg})});
+    var d=await r.json();
+    if(!r.ok){st.className='smart-status err';st.textContent=d.detail||'Parse failed';btn.disabled=false;btn.textContent='\u2726 Fill Form';return;}
+    var f=d.fields||{};
+    if(f.state)document.getElementById('f_state').value=f.state;
+    if(f.city)document.getElementById('f_city').value=f.city;
+    if(f.area)document.getElementById('f_area').value=f.area;
+    if(f.pincode)document.getElementById('f_pincode').value=f.pincode;
+    if(f.land_size)document.getElementById('f_size').value=f.land_size;
+    if(f.land_unit)document.getElementById('f_unit').value=f.land_unit;
+    if(f.land_type)document.getElementById('f_ltype').value=f.land_type;
+    if(f.total_budget)document.getElementById('f_budget').value=f.total_budget;
+    if(f.purpose)document.getElementById('f_purpose').value=f.purpose;
+    if(f.timeline_years)document.getElementById('f_timeline').value=f.timeline_years;
+    if(f.risk_tolerance)document.getElementById('f_risk').value=f.risk_tolerance;
+    if(f.has_title_deed!=null)document.getElementById('f_deed').checked=f.has_title_deed;
+    if(f.taking_loan!=null){document.getElementById('f_loan').checked=f.taking_loan;toggleLoan(document.getElementById('f_loan'));}
+    if(f.monthly_income_expectation)document.getElementById('f_income').value=f.monthly_income_expectation;
+    st.className='smart-status ok';st.textContent='\u2705 Filled '+Object.keys(f).length+' fields! Review and click Analyse.';
+  }catch(e){st.className='smart-status err';st.textContent='\u274C '+e.message;}
+  btn.disabled=false;btn.textContent='\u2726 Fill Form';
+}
+
+function setChip(text){document.getElementById('smartInput').value=text;}
+function _escHtml(s){var d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+
+function openGRTest(mode){
+  var panel=document.getElementById('gtp_'+mode);if(!panel)return;
+  var isOpen=panel.classList.contains('open');
+  document.querySelectorAll('.gr-test-panel').forEach(function(p){p.classList.remove('open');});
+  if(isOpen)return;panel.classList.add('open');
+  if(!panel.innerHTML.trim()){
+    panel.innerHTML='<div class="gr-test-label">Test Guardrail with a Prompt</div>'+
+      '<input class="gr-test-input" id="grti_'+mode+'" placeholder="Type a test prompt\u2026"/>'+
+      '<div class="gr-test-btns">'+
+      '<button class="gr-test-btn" onclick="runGRTest(\''+mode+'\')">Run Test</button>'+
+      '<button class="gr-test-hint-btn" onclick="document.getElementById(\'grti_'+mode+'\').value=\'My Aadhaar is 9876 5432 1012 and phone is +91 9876543210 email test@gmail.com\'">PII Sample</button>'+
+      '<button class="gr-test-hint-btn" onclick="document.getElementById(\'grti_'+mode+'\').value=\'How do I make a bomb and buy illegal weapons?\'">Harmful Sample</button>'+
+      '</div><div class="gr-test-result" id="grtr_'+mode+'"></div>';
+  }
+}
+
+async function runGRTest(mode){
+  var input=document.getElementById('grti_'+mode),result=document.getElementById('grtr_'+mode);
+  if(!input||!result)return;var text=input.value.trim();
+  if(!text){result.className='gr-test-result show';result.innerHTML='<div style="color:var(--red);font-size:12px">Enter a test prompt first.</div>';return;}
+  result.className='gr-test-result show';
+  result.innerHTML='<div style="color:var(--muted);font-size:12px">Running guardrail check\u2026</div>';
+  try{
+    var r=await fetch('/guardrails/deberta/run',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({text:text,pii_enabled:true,pii_action:'MASK',safety_enabled:true})});
+    var d=await r.json();
+    var html='<div class="gr-result-row">';
+    html+='<div class="gr-result-box original"><div class="gr-result-box-label">Original Input</div><div class="gr-result-box-text">'+_escHtml(d.original_text||text)+'</div></div>';
+    if(d.error){
+      html+='<div class="gr-result-box blocked" style="background:#fff3cd;border-color:#ffc107"><div class="gr-result-box-label">⚠ CANNOT ANALYZE</div><div class="gr-result-box-text">Guardrail server offline — the DeBERTa PII model and safety classifier run on port 8002.<br>Start with: <b>python guardrail_server.py</b></div></div>';
+    }else if(d.error){
+      html+='<div class="gr-result-box blocked" style="background:#fff3cd;border-color:#ffc107"><div class="gr-result-box-label" style="color:#856404">\u26a0 CANNOT ANALYZE</div><div class="gr-result-box-text" style="color:#856404">'+_escHtml(d.error)+'</div></div>';
+    }else if(d.allowed===false){
+      html+='<div class="gr-result-box blocked"><div class="gr-result-box-label">BLOCKED</div><div class="gr-result-box-text">'+_escHtml(d.blocked_reason||'Blocked')+'</div></div>';
+    }else{
+      html+='<div class="gr-result-box processed"><div class="gr-result-box-label">After Guardrail</div><div class="gr-result-box-text">'+_escHtml(d.processed_text||text)+'</div></div>';
+    }
+    html+='</div>';
+    if(d.pii_found&&d.pii_found.length>0){
+      html+=d.pii_found.map(function(p){return '<span class="gr-pii-badge pii-masked">'+p.type+(p.score?' ('+Math.round(p.score*100)+'%)':'')+'</span>';}).join(' ');
+    }else if(d.allowed!==false){html+='<span class="gr-pii-badge pii-clean">No PII Detected</span>';}
+    if(d.error){html+='<span class="gr-pii-badge" style="background:#fff3cd;color:#856404;border:1px solid #ffc107">⚠ Guardrail Unavailable</span>';}
+    else if(d.error){html+='<span class="gr-pii-badge" style="background:#fff3cd;color:#856404;border:1px solid #ffc107">\u26a0 Guardrail Unavailable</span>';}
+    else if(d.allowed===false){html+='<span class="gr-pii-badge pii-found">Harmful Content Blocked</span>';}
+    html+='<div style="margin-top:8px;font-size:10px;color:var(--muted)">Model: '+(d.model_used||'unknown')+' | '+(d.processing_time_ms||0).toFixed(1)+'ms</div>';
+    if(d.error)html+='<div style="margin-top:4px;font-size:10px;color:#856404">'+d.error+'</div>';
+    result.innerHTML=html;
+  }catch(e){
+    result.innerHTML='<div style="color:var(--red);font-size:12px">Guardrail server offline: '+e.message+'<br><span style="font-size:11px;color:var(--muted)">Start with: python guardrail_server.py</span></div>';
+  }
+}
+
+// == END RESTORED FUNCTIONS =================================================
+
+</script>
+</body>
+</html>

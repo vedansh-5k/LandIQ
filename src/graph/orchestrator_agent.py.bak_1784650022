@@ -1,0 +1,303 @@
+"""
+orchestrator_agent.py  — LandIQ Dynamic Orchestrator
+- Stores _orch_plan in state so frontend shows real layers
+- Resets + reads token report per session (fixes blank token/time/cost)
+- Reduced stagger for faster execution
+- Failed agents never kill the run
+"""
+
+import json, time, os, logging
+from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
+logger = logging.getLogger(__name__)
+
+
+# ── Load .env FIRST so API keys are available ─────────────────────────
+def _load_env():
+    current = Path(__file__).resolve().parent
+    for _ in range(6):
+        env_file = current / ".env"
+        if env_file.exists():
+            with open(env_file, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith("#") and "=" in line:
+                        key, _, val = line.partition("=")
+                        key = key.strip()
+                        val = val.strip().strip('"').strip("'")
+                        if key and key not in os.environ:
+                            os.environ[key] = val
+            return
+        current = current.parent
+
+_load_env()
+
+from src.utils.agent_loader import get_agent_catalogue
+
+DEFAULT_PLAN = {
+    "layers": [
+        ["location", "legal", "financial", "market"],
+        ["bull", "bear"],
+        ["due_diligence"],
+        ["senior_consultant"],
+    ]
+}
+
+PLANNER_SYSTEM_PROMPT = """You are the ORCHESTRATOR of LandIQ.
+You have FULL AUTHORITY to decide which agents run and in what order.
+
+Return ONLY this JSON (no markdown, no explanation):
+{"layers": [["agent1","agent2"], ["agent3"], ["agent4"]]}
+
+RULES:
+- Same list = parallel execution
+- location/legal/financial/market are independent → Layer 1
+- bull/bear need Layer 1 results → Layer 2
+- due_diligence needs everything → near end
+- senior_consultant ALWAYS last, alone
+- Only include agents from the user's selection (or all if "all")
+- Return ONLY the JSON."""
+
+
+def _get_llm():
+    from src.utils.llm_factory import get_llm_for_agent
+    try:
+        llm = get_llm_for_agent("location", temperature=0.1)
+        print(f"  [ORCHESTRATOR] LLM: {type(llm).__name__}")
+        return llm
+    except Exception as e:
+        print(f"  [ORCHESTRATOR] llm_factory failed: {str(e)[:80]}")
+
+    groq_key = os.environ.get("GROQ_API_KEY")
+    if groq_key:
+        from langchain_groq import ChatGroq
+        llm = ChatGroq(api_key=groq_key, model="llama-3.3-70b-versatile", temperature=0.1)
+        print(f"  [ORCHESTRATOR] LLM: ChatGroq (direct)")
+        return llm
+
+    google_key = os.environ.get("GOOGLE_API_KEY")
+    if google_key:
+        from langchain_google_genai import ChatGoogleGenerativeAI
+        llm = ChatGoogleGenerativeAI(google_api_key=google_key, model="gemini-2.0-flash", temperature=0.1)
+        print(f"  [ORCHESTRATOR] LLM: ChatGemini (direct)")
+        return llm
+
+    raise RuntimeError("No API key found — check .env has GROQ_API_KEY or GOOGLE_API_KEY")
+
+
+def plan_execution(user_inputs: dict) -> dict:
+    catalogue = get_agent_catalogue()
+    selected = user_inputs.get("selected_agents", ["all"])
+    valid = {a["name"] for a in catalogue}
+
+    cat_text = "\n".join(
+        f"- {a['name']} (layer {a['layer']}): {a['description'][:70]}"
+        for a in sorted(catalogue, key=lambda x: x["layer"])
+    )
+
+    print(f"\n  [ORCHESTRATOR] Agents available: {sorted(valid)}")
+    print(f"  [ORCHESTRATOR] User selected: {selected}")
+
+    try:
+        llm = _get_llm()
+        user_text = (
+            f"AVAILABLE AGENTS:\n{cat_text}\n\n"
+            f"ANALYSE: {user_inputs.get('land_size')} {user_inputs.get('land_unit')} "
+            f"in {user_inputs.get('area')}, {user_inputs.get('city')}, {user_inputs.get('state')}. "
+            f"Budget INR {user_inputs.get('total_budget')}. "
+            f"Purpose: {user_inputs.get('purpose')}.\n"
+            f"SELECTED: {selected}\n\nReturn JSON plan now."
+        )
+        raw = llm.invoke([("system", PLANNER_SYSTEM_PROMPT), ("human", user_text)])
+        text = raw.content if hasattr(raw, "content") else str(raw)
+        text = text.strip().strip("`").strip()
+        if text.startswith("json"):
+            text = text[4:].strip()
+        if text.startswith("```"):
+            text = text[3:].strip()
+        if text.endswith("```"):
+            text = text[:-3].strip()
+
+        plan_data = json.loads(text)
+        layers = [[a for a in layer if a in valid]
+                  for layer in plan_data.get("layers", [])]
+        layers = [l for l in layers if l]
+
+        if not layers:
+            raise ValueError("No valid agents in plan")
+
+        print(f"  [ORCHESTRATOR] ✓ LLM PLAN: {layers}")
+        return {"layers": layers, "source": "llm"}
+
+    except Exception as e:
+        print(f"  [ORCHESTRATOR] Planning failed: {str(e)[:80]}")
+        print(f"  [ORCHESTRATOR] Using default plan")
+
+        if "all" in selected:
+            default_agents = set()
+            for layer in DEFAULT_PLAN["layers"]:
+                default_agents.update(layer)
+            extra = valid - default_agents
+            layers = [list(l) for l in DEFAULT_PLAN["layers"]]
+            if extra:
+                layers[0] = layers[0] + list(extra)
+        else:
+            layers = []
+            for layer in DEFAULT_PLAN["layers"]:
+                kept = [a for a in layer
+                        if (a in selected or a == "senior_consultant") and a in valid]
+                if kept:
+                    layers.append(kept)
+            if not layers:
+                layers = [list(l) for l in DEFAULT_PLAN["layers"]]
+
+        print(f"  [ORCHESTRATOR] Default plan: {layers}")
+        return {"layers": layers, "source": "default"}
+
+
+def _run_layer(agent_names: list, state: dict) -> dict:
+    from src.agents.dynamic_agent import run_dynamic_agent
+    if len(agent_names) == 1:
+        try:
+            return run_dynamic_agent(agent_names[0], state)
+        except Exception as e:
+            print(f"  [AGENT ERROR] {agent_names[0]}: {str(e)[:80]}")
+            return {
+                "error_log": [f"{agent_names[0]} failed: {str(e)[:120]}"],
+                "completed_agents": [f"{agent_names[0]} (Failed)"]
+            }
+
+    results = {}
+
+    def run_one(name, delay):
+        time.sleep(delay)
+        try:
+            return run_dynamic_agent(name, state)
+        except Exception as e:
+            print(f"  [AGENT ERROR] {name}: {str(e)[:80]}")
+            return {
+                "error_log": [f"{name} failed: {str(e)[:120]}"],
+                "completed_agents": [f"{name} (Failed)"]
+            }
+
+    # max_workers=4 → mild throttle so we don't hit Groq TPM all at once;
+    # anything that still 429s auto-routes to Gemini inside run_dynamic_agent.
+    with ThreadPoolExecutor(max_workers=min(4, len(agent_names))) as ex:
+        futures = {ex.submit(run_one, n, i * 0.15): n
+                   for i, n in enumerate(agent_names)}
+        for fut in as_completed(futures, timeout=120):
+            try:
+                out = fut.result(timeout=90)
+            except Exception as e:
+                name = futures[fut]
+                print(f"  [TIMEOUT] {name}: {str(e)[:60]}")
+                out = {"error_log": [f"{name} timed out"], "completed_agents": [f"{name} (Timeout)"]}
+            for k, v in out.items():
+                if k in ("completed_agents", "error_log") and k in results:
+                    results[k] = results[k] + (v if isinstance(v, list) else [v])
+                else:
+                    results[k] = v
+    return results
+
+
+def run_dynamic_advisor(user_inputs: dict) -> dict:
+    state = dict(user_inputs)
+    state.setdefault("completed_agents", [])
+    state.setdefault("error_log", [])
+
+    session_start = time.time()
+
+    # ★ Reset the token accumulator so this run's report is clean
+    try:
+        from src.utils.tracked_chain import reset_token_report
+        reset_token_report()
+    except Exception:
+        pass
+
+    print(f"\n{'#'*55}")
+    print(f"# LANDIQ ORCHESTRATOR — {state.get('area')}, {state.get('city')}")
+    print(f"{'#'*55}")
+
+    # ── 1/3: RAG context ──
+    print(f"\n  [1/3] RAG context...")
+    try:
+        from src.rag.retriever import get_rag_context
+        q = (f"{state.get('area', '')} {state.get('city', '')} "
+             f"{state.get('state', '')} {state.get('land_type', '')} land")
+        state["rag_context"] = get_rag_context(q)
+        print(f"  [1/3] ✓ RAG done")
+    except Exception as e:
+        state["rag_context"] = "No context available."
+        print(f"  [1/3] RAG failed: {str(e)[:60]}")
+
+    # ── 2/3: Planning ──
+    print(f"\n  [2/3] Planning...")
+    plan = plan_execution(user_inputs)
+    state["execution_plan"] = plan
+
+    state["_orch_plan"] = {
+        "layers": plan["layers"],
+        "source": plan["source"],
+        "total_agents": sum(len(l) for l in plan["layers"]),
+        "total_layers": len(plan["layers"]),
+    }
+
+    # ── 3/3: Execute layers ──
+    print(f"\n  [3/3] Executing {len(plan['layers'])} layers (plan={plan['source']})...")
+
+    for i, layer in enumerate(plan["layers"], 1):
+        print(f"\n  [Layer {i}] {layer}")
+        t0 = time.time()
+        out = _run_layer(layer, state)
+        print(f"  [Layer {i}] done in {time.time()-t0:.1f}s")
+
+        for k, v in out.items():
+            if k in ("completed_agents", "error_log"):
+                state[k] = state.get(k, []) + (v if isinstance(v, list) else [v])
+            else:
+                state[k] = v
+
+    # ── Final recommendation (fall back to due_diligence if senior failed) ──
+    sc = state.get("senior_consultant_output")
+    if sc is not None:
+        state["final_recommendation"] = sc
+    elif state.get("due_diligence_output"):
+        state["final_recommendation"] = state["due_diligence_output"]
+
+    session_duration = round(time.time() - session_start, 2)
+
+    # ── Token report (from tracked_chain) ──
+    try:
+        from src.utils.tracked_chain import get_token_report
+        tokens = get_token_report()
+        tokens["session_duration_seconds"] = session_duration
+        state["token_report"] = tokens
+    except Exception:
+        state["token_report"] = {
+            "session_duration_seconds": session_duration,
+            "total_llm_calls": len(state.get("completed_agents", [])),
+            "input_tokens": 0, "output_tokens": 0, "total_tokens": 0,
+            "estimated_cost_usd": 0, "per_agent_log": [],
+        }
+
+    # ── MLflow logging ──
+    try:
+        from src.utils.mlflow_tracker import log_analysis_run
+        log_analysis_run(state)
+        state["mlflow_logged"] = True
+    except Exception as e:
+        state["mlflow_logged"] = False
+        logger.debug(f"MLflow logging skipped: {e}")
+
+    completed = state.get("completed_agents", [])
+    errors = state.get("error_log", [])
+    print(f"\n{'#'*55}")
+    print(f"# DONE — plan={plan['source']} | agents={len(completed)} "
+          f"| errors={len(errors)} | {session_duration}s")
+    print(f"# Completed: {completed}")
+    if errors:
+        print(f"# Errors: {errors}")
+    print(f"{'#'*55}\n")
+
+    return state

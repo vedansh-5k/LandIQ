@@ -1,0 +1,30 @@
+{
+  "usecase_name": "land",
+  "config_name": "plus",
+  "operations": {
+    "chat": [
+      {
+        "litellm_model": "gemini/gemini-2.0-flash",
+        "priority": 1
+      },
+      {
+        "litellm_model": "groq/llama-3.1-8b-instant",
+        "priority": 2
+      }
+    ]
+  },
+  "custom_operations": null,
+  "restrictions": {
+    "tpm": 100000,
+    "rpm": 60,
+    "tpr": 4096
+  },
+  "guardrails": {
+    "pii_masking": false,
+    "profanity_filter": false
+  },
+  "full_name": "land_plus",
+  "status": "active",
+  "created_at": "2026-06-30T07:18:19.953088+00:00",
+  "updated_at": "2026-07-01T10:34:51.517481+00:00"
+}

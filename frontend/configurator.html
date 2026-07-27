@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>LandIQ — Agent Configurator</title>
+<style>
+:root {
+  --cream:#F5F0E8;--almond:#E8DFC8;--gold:#B8960C;--gold2:#D4AF37;
+  --brown:#5C4A1E;--brown2:#8B6914;--text:#2C1810;--muted:#6B5744;
+  --border:#C8B896;--surface:#FDFAF4;--ok:#2D6A2D;--err:#8B1A1A;
+  --r:8px;--sh:0 2px 12px rgba(92,74,30,.12);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Georgia,serif;background:var(--cream);color:var(--text);min-height:100vh}
+
+/* NAV */
+nav{display:flex;align-items:center;justify-content:space-between;padding:14px 28px;
+    background:var(--almond);border-bottom:2px solid var(--border);}
+.nav-logo{font-size:1.3rem;font-weight:700;color:var(--brown)}
+.nav-links a{margin-left:20px;text-decoration:none;color:var(--muted);font-size:.85rem}
+.nav-links a:hover{color:var(--brown)}
+.nav-links a.active{color:var(--gold);font-weight:600}
+
+/* TOPBAR */
+.topbar{display:flex;align-items:center;justify-content:space-between;
+        padding:16px 28px;background:var(--surface);border-bottom:1px solid var(--border)}
+.topbar h1{font-size:1.1rem;color:var(--brown)}
+#btn-choose-model{padding:8px 18px;font-size:.82rem;background:var(--surface);
+  border:1px solid var(--gold);color:var(--brown2);border-radius:var(--r);cursor:pointer}
+#btn-choose-model:hover{background:var(--almond)}
+
+/* BODY */
+.body{display:flex;gap:20px;padding:24px 28px;flex-wrap:wrap}
+.col-left{flex:1;min-width:320px}
+.col-right{flex:1.3;min-width:340px}
+
+/* CARD */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);
+      padding:20px;margin-bottom:18px;box-shadow:var(--sh)}
+.card h3{font-size:.95rem;color:var(--brown);margin-bottom:14px;
+         padding-bottom:8px;border-bottom:1px solid var(--almond)}
+
+/* TABS */
+.tabs{display:flex;gap:8px;margin-bottom:16px}
+.tab{flex:1;padding:8px;font-size:.78rem;text-align:center;border:1px solid var(--border);
+     border-radius:var(--r);background:var(--cream);cursor:pointer;color:var(--muted);transition:all .15s}
+.tab.active{background:var(--gold);color:#fff;border-color:var(--gold);font-weight:600}
+
+/* FORM */
+label{font-size:.76rem;color:var(--muted);display:block;margin-bottom:3px;margin-top:8px}
+input[type=text],input[type=password],input[type=url],textarea,select{
+  width:100%;padding:9px 11px;font-size:.84rem;font-family:inherit;
+  border:1px solid var(--border);border-radius:var(--r);background:var(--cream);
+  color:var(--text);transition:border .15s}
+input:focus,textarea:focus,select:focus{outline:none;border-color:var(--gold)}
+textarea{resize:vertical;min-height:64px}
+
+/* DROP ZONE */
+.dropzone{border:2px dashed var(--border);border-radius:var(--r);padding:28px 16px;
+  text-align:center;cursor:pointer;color:var(--muted);font-size:.82rem;margin-top:8px;transition:all .2s}
+.dropzone.over{border-color:var(--gold);background:var(--almond)}
+.dropzone .icon{font-size:1.8rem;display:block;margin-bottom:6px}
+
+/* PREFILL BADGE */
+.prefill-badge{display:inline-block;padding:3px 10px;font-size:.72rem;
+  background:var(--almond);border:1px solid var(--gold);border-radius:20px;
+  color:var(--brown2);margin-bottom:12px}
+#prefill-sec{display:none}
+
+/* BUTTONS */
+.btn{width:100%;padding:10px;font-size:.88rem;background:var(--gold);color:#fff;
+  border:none;border-radius:var(--r);cursor:pointer;font-family:inherit;font-weight:600;
+  transition:background .2s;margin-top:10px}
+.btn:hover{background:var(--brown2)}
+.btn:disabled{background:var(--border);cursor:not-allowed}
+.btn-sm{padding:6px 14px;font-size:.76rem;border:1px solid var(--border);border-radius:var(--r);
+  background:var(--cream);cursor:pointer;color:var(--muted);transition:all .15s}
+.btn-sm:hover{background:var(--almond);border-color:var(--gold);color:var(--brown)}
+.btn-del{border-color:#c0392b;color:#c0392b}
+.btn-del:hover{background:#fff0f0}
+
+/* STATUS */
+.msg{padding:10px 14px;border-radius:var(--r);font-size:.81rem;margin-top:10px;display:none}
+.msg.ok{background:#edf7ed;color:var(--ok);border:1px solid #a5d6a7;display:block}
+.msg.er{background:#fdecea;color:var(--err);border:1px solid #ef9a9a;display:block}
+.msg.ld{background:var(--almond);color:var(--brown2);border:1px solid var(--border);display:block}
+
+/* AGENT LIST */
+.agent-item{display:flex;align-items:flex-start;justify-content:space-between;
+  padding:12px 14px;border:1px solid var(--border);border-radius:var(--r);
+  margin-bottom:8px;background:var(--cream)}
+.agent-item:hover{box-shadow:0 2px 8px rgba(92,74,30,.15)}
+.ai-info h4{margin:0 0 3px;font-size:.86rem;color:var(--brown)}
+.ai-info p{margin:0;font-size:.73rem;color:var(--muted);max-width:280px}
+.ai-slug{font-size:.67rem;color:var(--gold);font-family:monospace}
+
+/* COMPRESSION STATS */
+.comp-row{display:flex;align-items:center;justify-content:space-between;
+  padding:10px 14px;border-radius:var(--r);margin-bottom:8px;
+  border:1px solid var(--border);background:var(--cream)}
+.comp-label{font-size:.78rem;font-weight:700;color:var(--brown);min-width:120px}
+.comp-bar-wrap{flex:1;margin:0 12px;height:6px;background:var(--almond);border-radius:3px;overflow:hidden}
+.comp-bar{height:100%;background:var(--gold);border-radius:3px;transition:width .4s}
+.comp-nums{font-size:.73rem;color:var(--muted);white-space:nowrap}
+.comp-saved{font-size:.71rem;color:var(--ok);font-weight:700;white-space:nowrap;margin-left:8px}
+
+/* TOKEN STATS */
+.token-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:4px}
+.tstat{background:var(--cream);border:1px solid var(--border);border-radius:var(--r);
+  padding:10px;text-align:center}
+.tstat .val{font-size:1.1rem;font-weight:700;color:var(--brown)}
+.tstat .lbl{font-size:.68rem;color:var(--muted);margin-top:2px}
+
+/* MODAL */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:1000;
+  justify-content:center;align-items:center}
+.modal-bg.open{display:flex}
+.modal{background:var(--surface);border-radius:12px;padding:28px;width:460px;
+  max-width:95vw;box-shadow:0 8px 40px rgba(0,0,0,.25);position:relative}
+.modal h3{margin:0 0 6px;color:var(--brown);font-size:1rem}
+.modal p.sub{font-size:.75rem;color:var(--muted);margin-bottom:16px}
+.modal-close{position:absolute;top:14px;right:18px;cursor:pointer;font-size:1.2rem;
+  color:var(--muted);background:none;border:none}
+.modal-foot{display:flex;gap:10px;margin-top:16px;justify-content:flex-end}
+.modal-status{font-size:.76rem;color:var(--ok);min-height:16px;margin-top:4px}
+.provider-hint{font-size:.70rem;color:var(--muted);margin-top:-6px;margin-bottom:8px}
+
+/* CATALOGUE MODAL */
+#cat-modal .modal{width:860px;max-height:85vh;display:flex;flex-direction:column}
+.cat-filters{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.cat-filter{padding:4px 12px;font-size:.74rem;border:1px solid var(--border);
+  border-radius:20px;cursor:pointer;background:var(--cream);color:var(--muted)}
+.cat-filter.active{background:var(--gold);color:#fff;border-color:var(--gold)}
+#cat-search{margin-bottom:12px}
+.cat-grid{overflow-y:auto;flex:1;display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px}
+.model-card{background:var(--cream);border:1px solid var(--border);border-radius:var(--r);padding:12px}
+.model-card h4{font-size:.82rem;color:var(--brown);margin-bottom:4px;word-break:break-all}
+.model-card .provider{font-size:.68rem;color:var(--gold);font-weight:600;margin-bottom:6px}
+.model-card .ctx{font-size:.68rem;color:var(--muted)}
+.model-card .select-btn{margin-top:8px;width:100%;padding:6px;font-size:.74rem;
+  background:var(--gold);color:#fff;border:none;border-radius:6px;cursor:pointer}
+.model-card .select-btn:hover{background:var(--brown2)}
+.cat-loading{text-align:center;padding:40px;color:var(--muted);font-size:.85rem}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">🏛 LandIQ</div>
+  <div class="nav-links">
+    <a href="/static/index.html">Dashboard</a>
+    <a href="/static/llm-setup.html">LLM Setup</a>
+    <a href="/static/configurator.html" class="active">Agent Configurator</a>
+  </div>
+</nav>
+
+<div class="topbar">
+  <h1>⚙️ Agent Configurator</h1>
+  <button id="btn-choose-model" onclick="openLLMModal()">🔧 Choose Model (optional)</button>
+</div>
+
+<div class="body">
+
+  <!-- LEFT: Create Agent -->
+  <div class="col-left">
+    <div class="card">
+      <h3>➕ Create New Agent</h3>
+
+      <div class="tabs">
+        <div class="tab active" onclick="switchTab('text',this)">✏️ Type</div>
+        <div class="tab" onclick="switchTab('file',this)">📄 Upload File</div>
+        <div class="tab" onclick="switchTab('github',this)">🐙 GitHub URL</div>
+      </div>
+
+      <!-- TEXT TAB -->
+      <div id="tab-text">
+        <label>Agent Slug (no spaces)</label>
+        <input type="text" id="t-name" placeholder="e.g. market_analyst"/>
+        <label>Display Name</label>
+        <input type="text" id="t-display" placeholder="e.g. Market Analyst"/>
+        <label>Description</label>
+        <textarea id="t-desc" rows="2" placeholder="What this agent does"></textarea>
+        <label>Capabilities</label>
+        <textarea id="t-caps" rows="2" placeholder="Key skills and knowledge"></textarea>
+        <label>Output Format</label>
+        <input type="text" id="t-output" placeholder="e.g. Structured JSON with risk score"/>
+      </div>
+
+      <!-- FILE TAB -->
+      <div id="tab-file" style="display:none">
+        <div class="dropzone" id="dropzone"
+             onclick="document.getElementById('file-inp').click()"
+             ondragover="dzOver(event)" ondrop="dzDrop(event)" ondragleave="dzLeave()">
+          <span class="icon">📄</span>
+          Drop .md or .txt here<br><small>or click to browse</small>
+          <input type="file" id="file-inp" accept=".md,.txt" style="display:none" onchange="handleFile(event)"/>
+        </div>
+        <div id="file-msg" class="msg"></div>
+      </div>
+
+      <!-- GITHUB TAB -->
+      <div id="tab-github" style="display:none">
+        <label>GitHub URL</label>
+        <input type="url" id="gh-url" placeholder="https://github.com/user/repo/blob/main/SKILL.md"/>
+        <small style="font-size:.70rem;color:var(--muted)">Works with /blob/ or raw.githubusercontent.com</small>
+        <button class="btn" style="margin-top:10px" onclick="fetchGH()">🔍 Fetch & Preview</button>
+        <div id="gh-msg" class="msg"></div>
+      </div>
+
+      <!-- PREFILL -->
+      <div id="prefill-sec">
+        <div class="prefill-badge">✅ Auto-filled — review & confirm</div>
+        <label>Slug</label><input type="text" id="p-name"/>
+        <label>Display Name</label><input type="text" id="p-display"/>
+        <label>Description</label><textarea id="p-desc" rows="2"></textarea>
+        <label>Capabilities</label><textarea id="p-caps" rows="2"></textarea>
+        <label>Output Format</label><input type="text" id="p-output"/>
+        <label>Extra Instructions</label><textarea id="p-extra" rows="2" placeholder="Optional..."></textarea>
+      </div>
+
+      <button class="btn" id="btn-save" onclick="saveAgent()">💾 Save Agent</button>
+      <div id="save-msg" class="msg"></div>
+    </div>
+
+    <!-- COMPRESSION STATS (populated after analysis) -->
+    <div class="card" id="comp-card" style="display:none">
+      <h3>📉 Last Run — Compression Stats</h3>
+      <div id="comp-rows"></div>
+    </div>
+
+    <!-- TOKEN STATS (populated after analysis) -->
+    <div class="card" id="token-card" style="display:none">
+      <h3>📊 Last Run — Token & Time Stats</h3>
+      <div class="token-grid" id="token-grid"></div>
+    </div>
+  </div>
+
+  <!-- RIGHT: Active Agents -->
+  <div class="col-right">
+    <div class="card">
+      <h3>🤖 Active Agents <span id="agent-count" style="font-weight:normal;color:var(--muted);font-size:.78rem"></span></h3>
+      <div id="agent-list"><p style="color:var(--muted);font-size:.82rem">Loading…</p></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- LLM Choose Model Modal -->
+<div class="modal-bg" id="llm-modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeLLMModal()">✕</button>
+    <h3>🔧 LLM Configuration</h3>
+    <p class="sub">Optional. Leave blank to use environment defaults. Click "Browse 2200+ Models" to pick from the full LiteLLM catalogue.</p>
+
+    <button class="btn" style="margin-top:0;margin-bottom:14px;background:var(--brown)" onclick="openCatalogue()">
+      📚 Browse 2200+ Models (LiteLLM Catalogue)
+    </button>
+
+    <label>Provider</label>
+    <select id="llm-provider" onchange="updateHint()">
+      <option value="openai">OpenAI</option>
+      <option value="azure">Azure OpenAI</option>
+      <option value="gemini">Google Gemini</option>
+      <option value="ollama">Ollama (local)</option>
+      <option value="groq">Groq</option>
+      <option value="custom">Custom / LiteLLM</option>
+    </select>
+    <div class="provider-hint" id="provider-hint"></div>
+
+    <label>API Base URL</label>
+    <input type="url" id="llm-base" placeholder="https://api.openai.com/v1"/>
+    <label>API Key</label>
+    <input type="password" id="llm-key" placeholder="sk-..."/>
+    <label>Model Name</label>
+    <input type="text" id="llm-model" placeholder="gpt-4o"/>
+    <div id="current-model-display" style="font-size:.74rem;color:var(--gold);margin-top:6px"></div>
+
+    <div id="llm-status" class="modal-status"></div>
+    <div class="modal-foot">
+      <button class="btn-sm" onclick="closeLLMModal()">Cancel</button>
+      <button class="btn" style="width:auto;padding:8px 22px" onclick="saveLLM()">💾 Save & Apply</button>
+    </div>
+  </div>
+</div>
+
+<!-- Model Catalogue Modal -->
+<div class="modal-bg" id="cat-modal">
+  <div class="modal" style="width:860px;max-height:85vh;display:flex;flex-direction:column;overflow:hidden">
+    <button class="modal-close" onclick="closeCatalogue()">✕</button>
+    <h3 style="margin-bottom:6px">📚 LiteLLM Model Catalogue</h3>
+    <p class="sub" style="margin-bottom:10px">Click any model to select it. All 2200+ models from LiteLLM.</p>
+
+    <input type="text" id="cat-search" placeholder="🔍 Search models… (e.g. gpt-4, gemini, llama, groq)" oninput="filterCatalogue()"/>
+
+    <div class="cat-filters" id="cat-filters">
+      <div class="cat-filter active" onclick="setCatFilter('all',this)">All</div>
+    </div>
+
+    <div class="cat-grid" id="cat-grid">
+      <div class="cat-loading">Loading models…</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── State ──────────────────────────────────────────────────
+let currentTab = 'text';
+let parsedData = null;
+let allModels = [];
+let filteredModels = [];
+let catFilter = 'all';
+
+// ── Tab ───────────────────────────────────────────────────
+function switchTab(tab, el) {
+  currentTab = tab;
+  ['text','file','github'].forEach(t =>
+    document.getElementById('tab-'+t).style.display = t===tab?'block':'none');
+  document.querySelectorAll('.tab').forEach(e=>e.classList.remove('active'));
+  el.classList.add('active');
+  hidePrefill();
+  hide('save-msg');
+}
+function hidePrefill(){document.getElementById('prefill-sec').style.display='none';parsedData=null}
+function showPrefill(d){
+  parsedData=d;
+  set('p-name',d.name||''); set('p-display',d.display_name||'');
+  set('p-desc',d.description||''); set('p-caps',d.capabilities||'');
+  set('p-output',d.output_format||''); set('p-extra','');
+  document.getElementById('prefill-sec').style.display='block';
+}
+
+// ── File drag/drop ────────────────────────────────────────
+function dzOver(e){e.preventDefault();document.getElementById('dropzone').classList.add('over')}
+function dzLeave(){document.getElementById('dropzone').classList.remove('over')}
+function dzDrop(e){
+  e.preventDefault();dzLeave();
+  const f=e.dataTransfer.files[0];if(f)uploadFile(f);
+}
+function handleFile(e){const f=e.target.files[0];if(f)uploadFile(f)}
+
+async function uploadFile(f){
+  if(!f.name.match(/\.(md|txt)$/i)){return msg('file-msg','Only .md or .txt files','er')}
+  msg('file-msg','Parsing '+f.name+'…','ld');
+  const fd=new FormData(); fd.append('file',f);
+  try{
+    const r=await fetch('/agents/preview-file',{method:'POST',body:fd});
+    const d=await r.json();
+    if(!r.ok) throw new Error(d.detail||JSON.stringify(d));
+    showPrefill(d);
+    msg('file-msg','✅ Parsed "'+f.name+'" — review fields below','ok');
+  }catch(e){msg('file-msg','❌ '+e.message,'er')}
+}
+
+// ── GitHub fetch ──────────────────────────────────────────
+async function fetchGH(){
+  const url=val('gh-url');
+  if(!url){return msg('gh-msg','Enter a URL first','er')}
+  msg('gh-msg','Fetching from GitHub…','ld');
+  try{
+    const r=await fetch('/agents/preview-url',{method:'POST',
+      headers:{'Content-Type':'application/json'},body:JSON.stringify({url})});
+    const d=await r.json();
+    if(!r.ok) throw new Error(d.detail||JSON.stringify(d));
+    showPrefill(d);
+    msg('gh-msg','✅ Fetched & parsed — review fields below','ok');
+  }catch(e){msg('gh-msg','❌ '+e.message,'er')}
+}
+
+// ── Save agent ────────────────────────────────────────────
+async function saveAgent(){
+  let payload;
+  if(parsedData){
+    payload={
+      name:val('p-name'),display_name:val('p-display'),
+      description:val('p-desc'),capabilities:val('p-caps'),
+      output_format:val('p-output'),extra_instructions:val('p-extra'),
+      raw_md:parsedData.raw_md||''
+    };
+  } else {
+    payload={
+      name:val('t-name'),display_name:val('t-display'),
+      description:val('t-desc'),capabilities:val('t-caps'),
+      output_format:val('t-output')
+    };
+  }
+  if(!payload.name||!payload.display_name){
+    return msg('save-msg','⚠️ Slug and Display Name required','er');
+  }
+  document.getElementById('btn-save').disabled=true;
+  msg('save-msg','Saving…','ld');
+  try{
+    const r=await fetch('/agents/create',{method:'POST',
+      headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    const d=await r.json();
+    if(!r.ok) throw new Error(d.detail||JSON.stringify(d));
+    msg('save-msg','✅ Agent "'+payload.display_name+'" created ('+d.file+')','ok');
+    clearForm(); loadAgents();
+  }catch(e){msg('save-msg','❌ '+e.message,'er')}
+  finally{document.getElementById('btn-save').disabled=false}
+}
+
+function clearForm(){
+  ['t-name','t-display','t-desc','t-caps','t-output'].forEach(id=>{
+    const el=document.getElementById(id);if(el)el.value='';
+  });
+  hidePrefill();
+}
+
+// ── Load agents ───────────────────────────────────────────
+async function loadAgents(){
+  try{
+    const r=await fetch('/agents/list');
+    const d=await r.json();
+    renderAgents(d.agents||[]);
+  }catch(e){
+    document.getElementById('agent-list').innerHTML='<p style="color:var(--err)">Could not load agents</p>';
+  }
+}
+function renderAgents(list){
+  document.getElementById('agent-count').textContent='('+list.length+')';
+  const el=document.getElementById('agent-list');
+  if(!list.length){el.innerHTML='<p style="color:var(--muted);font-size:.82rem">No agents yet. Create one →</p>';return}
+  el.innerHTML=list.map(a=>`
+    <div class="agent-item">
+      <div class="ai-info">
+        <h4>${a.display_name||a.name}</h4>
+        <p>${(a.description||'').substring(0,90)}${(a.description||'').length>90?'…':''}</p>
+        <span class="ai-slug">${a.file||a.name+'.md'}</span>
+      </div>
+      <button class="btn-sm btn-del" onclick="delAgent('${a.name}')">🗑</button>
+    </div>`).join('');
+}
+async function delAgent(slug){
+  if(!confirm('Delete agent "'+slug+'"?'))return;
+  await fetch('/agents/'+slug,{method:'DELETE'});
+  loadAgents();
+}
+
+// ── Compression stats (called from index.html after analysis) ─
+function showCompressionStats(stats){
+  if(!stats||!stats.length)return;
+  document.getElementById('comp-card').style.display='block';
+  document.getElementById('comp-rows').innerHTML=stats.map(s=>`
+    <div class="comp-row">
+      <span class="comp-label">${s.mode.toUpperCase()}</span>
+      <div class="comp-bar-wrap"><div class="comp-bar" style="width:${Math.min(s.savings_pct,100)}%"></div></div>
+      <span class="comp-nums">${s.original_tokens}→${s.compressed_tokens} tkns</span>
+      <span class="comp-saved">-${s.savings_tokens} (${s.savings_pct.toFixed(1)}%)</span>
+    </div>`).join('');
+}
+window.LandIQ_showCompression=showCompressionStats;
+
+// ── Token stats (called from index.html after analysis) ──
+function showTokenStats(stats){
+  if(!stats)return;
+  document.getElementById('token-card').style.display='block';
+  const items=[
+    {val:stats.input_tokens||'-',lbl:'Input Tokens'},
+    {val:stats.output_tokens||'-',lbl:'Output Tokens'},
+    {val:stats.total_tokens||'-',lbl:'Total Tokens'},
+    {val:stats.duration_ms?((stats.duration_ms/1000).toFixed(1)+'s'):'-',lbl:'Duration'},
+    {val:stats.cost?('$'+stats.cost.toFixed(4)):'-',lbl:'Cost (USD)'},
+    {val:stats.model||'-',lbl:'Model Used'},
+  ];
+  document.getElementById('token-grid').innerHTML=items.map(i=>`
+    <div class="tstat"><div class="val">${i.val}</div><div class="lbl">${i.lbl}</div></div>`).join('');
+}
+window.LandIQ_showTokenStats=showTokenStats;
+
+// ── LLM Modal ─────────────────────────────────────────────
+const HINTS={
+  openai:'Base: https://api.openai.com/v1 | Models: gpt-4o, gpt-4-turbo',
+  azure:'Base: https://<resource>.openai.azure.com | Model: deployment name',
+  gemini:'Base: https://generativelanguage.googleapis.com/v1beta | Models: gemini-1.5-pro',
+  ollama:'Base: http://localhost:11434 | Models: llama3, mistral',
+  groq:'Base: https://api.groq.com/openai/v1 | Models: llama-3.3-70b-versatile',
+  custom:'Any LiteLLM endpoint. model = provider/model-name',
+};
+function updateHint(){
+  document.getElementById('provider-hint').textContent=HINTS[val('llm-provider')]||'';
+}
+function openLLMModal(){
+  document.getElementById('llm-modal').classList.add('open');
+  loadCurrentEndpoint();
+}
+function closeLLMModal(){document.getElementById('llm-modal').classList.remove('open')}
+async function loadCurrentEndpoint(){
+  try{
+    const r=await fetch('/config/get-endpoint');
+    const d=await r.json();
+    set('llm-base',d.api_base||'');
+    set('llm-model',d.model||'');
+    if(d.provider)document.getElementById('llm-provider').value=d.provider;
+    updateHint();
+    if(d.model)document.getElementById('current-model-display').textContent='Current: '+d.model;
+  }catch(e){}
+}
+async function saveLLM(){
+  const payload={
+    api_base:val('llm-base'),api_key:val('llm-key'),
+    model:val('llm-model'),provider:val('llm-provider')
+  };
+  if(!payload.api_base||!payload.model){
+    document.getElementById('llm-status').textContent='⚠️ Base URL and Model required';return;
+  }
+  document.getElementById('llm-status').textContent='Saving…';
+  try{
+    const r=await fetch('/config/set-endpoint',{method:'POST',
+      headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    if(!r.ok)throw new Error(await r.text());
+    document.getElementById('llm-status').textContent='✅ Saved — using '+payload.model;
+    document.getElementById('current-model-display').textContent='Current: '+payload.model;
+    setTimeout(closeLLMModal,1200);
+  }catch(e){document.getElementById('llm-status').textContent='❌ '+e.message}
+}
+
+// ── Model Catalogue ───────────────────────────────────────
+function openCatalogue(){
+  document.getElementById('cat-modal').classList.add('open');
+  if(!allModels.length)loadCatalogue();
+}
+function closeCatalogue(){document.getElementById('cat-modal').classList.remove('open')}
+
+async function loadCatalogue(){
+  document.getElementById('cat-grid').innerHTML='<div class="cat-loading">Loading 2200+ models…</div>';
+  try{
+    const r=await fetch('/catalog/models');
+    const d=await r.json();
+    allModels=d.models||d||[];
+    buildProviderFilters();
+    filterCatalogue();
+  }catch(e){
+    document.getElementById('cat-grid').innerHTML='<div class="cat-loading" style="color:var(--err)">Failed to load: '+e.message+'</div>';
+  }
+}
+
+function buildProviderFilters(){
+  const providers=[...new Set(allModels.map(m=>m.provider||m.litellm_provider||'unknown'))].sort();
+  const el=document.getElementById('cat-filters');
+  el.innerHTML='<div class="cat-filter active" onclick="setCatFilter(\'all\',this)">All ('+allModels.length+')</div>';
+  providers.slice(0,20).forEach(p=>{
+    const count=allModels.filter(m=>(m.provider||m.litellm_provider||'')===p).length;
+    el.innerHTML+=`<div class="cat-filter" onclick="setCatFilter('${p}',this)">${p} (${count})</div>`;
+  });
+}
+
+function setCatFilter(f,el){
+  catFilter=f;
+  document.querySelectorAll('.cat-filter').forEach(e=>e.classList.remove('active'));
+  el.classList.add('active');
+  filterCatalogue();
+}
+
+function filterCatalogue(){
+  const q=(document.getElementById('cat-search').value||'').toLowerCase();
+  filteredModels=allModels.filter(m=>{
+    const prov=m.provider||m.litellm_provider||'';
+    const name=m.model_name||m.litellm_model||'';
+    const matchProv=catFilter==='all'||prov===catFilter;
+    const matchQ=!q||name.toLowerCase().includes(q)||prov.toLowerCase().includes(q);
+    return matchProv&&matchQ;
+  });
+  renderCatalogue(filteredModels.slice(0,200));
+}
+
+function renderCatalogue(models){
+  if(!models.length){
+    document.getElementById('cat-grid').innerHTML='<div class="cat-loading">No models found</div>';
+    return;
+  }
+  document.getElementById('cat-grid').innerHTML=models.map(m=>{
+    const name=m.model_name||m.litellm_model||'unknown';
+    const prov=m.provider||m.litellm_provider||'';
+    const ctx=m.max_tokens||m.max_input_tokens||'-';
+    return `<div class="model-card">
+      <h4>${name}</h4>
+      <div class="provider">${prov}</div>
+      <div class="ctx">Context: ${ctx}</div>
+      <button class="select-btn" onclick="selectModel('${name}','${prov}')">✓ Select</button>
+    </div>`;
+  }).join('');
+}
+
+function selectModel(name,prov){
+  set('llm-model',name);
+  const provMap={openai:'openai',azure:'azure',google:'gemini',anthropic:'custom',
+    groq:'groq',mistral:'custom',cohere:'custom'};
+  const provKey=Object.keys(provMap).find(k=>prov.toLowerCase().includes(k));
+  if(provKey)document.getElementById('llm-provider').value=provMap[provKey];
+  updateHint();
+  document.getElementById('current-model-display').textContent='Selected: '+name;
+  closeCatalogue();
+  document.getElementById('llm-status').textContent='Model selected: '+name+' — click Save to apply';
+}
+
+// ── Helpers ───────────────────────────────────────────────
+function val(id){return (document.getElementById(id)||{}).value||''}
+function set(id,v){const el=document.getElementById(id);if(el)el.value=v}
+function hide(id){const el=document.getElementById(id);if(el){el.className='msg';el.textContent=''}}
+function msg(id,text,type){
+  const el=document.getElementById(id);
+  if(el){el.className='msg '+type;el.textContent=text}
+}
+
+// ── Init ──────────────────────────────────────────────────
+loadAgents();
+updateHint();
+</script>
+</body>
+</html>

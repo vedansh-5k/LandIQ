@@ -1,0 +1,11 @@
+.env
+__pycache__/
+*.pyc
+chroma_db/
+node_modules/
+.venv/
+venv/
+models/
+*.sqlite3
+.env.local
+.env.production

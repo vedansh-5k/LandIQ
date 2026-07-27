@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Create LLM Configuration — LandIQ</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg:#f5f0e8; --surface:#faf7f2; --border:#e2d9c8;
+      --gold:#8B6914; --gold-light:#c9a96e; --text:#1a1208; --muted:#7a6a52;
+      --green:#2d7a4f; --red:#c0392b; --radius:12px;
+      --shadow:0 2px 12px rgba(139,105,20,0.10);
+    }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { background:var(--bg); color:var(--text); font-family:'Inter',sans-serif; min-height:100vh; }
+
+    nav { background:var(--surface); border-bottom:1px solid var(--border); padding:14px 32px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:50; }
+    .logo { font-family:'Playfair Display',serif; font-size:22px; font-weight:700; }
+    .logo span { color:var(--gold); }
+    .nav-links { display:flex; gap:8px; align-items:center; }
+    .nav-link { padding:8px 16px; border-radius:8px; font-size:13px; font-weight:500; color:var(--muted); text-decoration:none; transition:all .2s; }
+    .nav-link:hover { background:var(--bg); color:var(--gold); }
+    .nav-link.active { background:var(--gold); color:#fff; }
+
+    .page-header { max-width:1000px; margin:0 auto; padding:32px 32px 0; }
+    .page-title { font-family:'Playfair Display',serif; font-size:28px; font-weight:700; }
+    .page-sub { font-size:13px; color:var(--muted); margin-top:6px; }
+    .step-pill { display:inline-flex; align-items:center; gap:6px; background:var(--surface); border:1px solid var(--border); border-radius:20px; padding:5px 14px; font-size:11px; color:var(--muted); margin-top:12px; }
+    .step-pill b { color:var(--gold); }
+
+    .main { max-width:1000px; margin:0 auto; padding:24px 32px 60px; display:flex; flex-direction:column; gap:20px; }
+    .card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); box-shadow:var(--shadow); padding:24px; }
+    .card-title { font-size:13px; font-weight:600; text-transform:uppercase; letter-spacing:.6px; color:var(--muted); margin-bottom:16px; display:flex; align-items:center; gap:6px; }
+
+    .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:8px; }
+    label { display:block; font-size:11px; font-weight:600; color:var(--muted); margin-bottom:6px; text-transform:uppercase; letter-spacing:.4px; }
+    input, select { width:100%; padding:10px 14px; border:1px solid var(--border); border-radius:8px; background:var(--bg); color:var(--text); font-size:14px; outline:none; }
+    input:focus, select:focus { border-color:var(--gold-light); }
+    .field-hint { font-size:11px; color:var(--muted); margin-top:4px; }
+
+    /* Empty pool warning */
+    .pool-warning { background:#fff8e6; border:1px solid #f0d896; border-radius:8px; padding:14px 18px; font-size:13px; color:#8a6d00; margin-bottom:16px; display:none; }
+    .pool-warning a { color:var(--gold); font-weight:600; }
+
+    /* Priority chain builder */
+    .priority-chain { display:flex; flex-direction:column; gap:8px; margin-bottom:14px; }
+    .priority-row { display:flex; align-items:center; gap:10px; background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:10px 12px; }
+    .priority-num { width:24px; height:24px; background:var(--gold); color:#fff; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; flex-shrink:0; }
+    .priority-row select { flex:1; margin:0; }
+    .priority-row .pr-rpm { width:90px; flex-shrink:0; }
+    .priority-row .pr-tpm { width:100px; flex-shrink:0; }
+    .priority-remove { cursor:pointer; color:var(--muted); font-size:16px; padding:4px 6px; flex-shrink:0; }
+    .priority-remove:hover { color:var(--red); }
+    .priority-mini-label { font-size:9px; color:var(--muted); text-align:center; margin-top:2px; }
+
+    .btn-add-priority { padding:9px 16px; background:var(--surface); border:1.5px dashed var(--gold-light); border-radius:8px; color:var(--gold); font-size:13px; font-weight:600; cursor:pointer; width:100%; }
+    .btn-add-priority:hover { background:var(--bg); }
+    .btn-add-priority:disabled { opacity:.4; cursor:not-allowed; }
+
+    .restrictions-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; }
+    .guardrails-row { display:flex; gap:24px; margin-top:6px; }
+    .gr-toggle { display:flex; align-items:center; gap:10px; }
+    .toggle { position:relative; width:42px; height:22px; flex-shrink:0; }
+    .toggle input { opacity:0; width:0; height:0; }
+    .slider { position:absolute; cursor:pointer; top:0;left:0;right:0;bottom:0; background:#ccc; border-radius:22px; transition:.3s; }
+    .slider:before { position:absolute; content:""; height:16px; width:16px; left:3px; bottom:3px; background:#fff; border-radius:50%; transition:.3s; }
+    input:checked + .slider { background:var(--gold); }
+    input:checked + .slider:before { transform:translateX(20px); }
+
+    .error-box { background:#fff5f5; border:1px solid #f5c6cb; color:var(--red); font-size:13px; padding:12px 16px; border-radius:8px; margin-top:16px; display:none; white-space:pre-wrap; }
+    .success-box { background:#f0f9f2; border:1px solid #b8e0c4; color:var(--green); font-size:13px; padding:12px 16px; border-radius:8px; margin-top:16px; display:none; }
+
+    .btn-save-config { width:100%; padding:14px; background:var(--gold); color:#fff; border:none; border-radius:10px; font-size:15px; font-weight:600; cursor:pointer; margin-top:8px; }
+    .btn-save-config:hover { background:#a07820; }
+    .btn-save-config:disabled { background:var(--border); color:var(--muted); cursor:not-allowed; }
+
+    /* Existing configs list */
+    .config-list { display:flex; flex-direction:column; gap:10px; }
+    .config-row { display:flex; align-items:center; justify-content:space-between; padding:14px 16px; background:var(--bg); border:1px solid var(--border); border-radius:8px; }
+    .config-row.disabled-config { opacity:.55; }
+    .config-name { font-size:14px; font-weight:600; }
+    .config-meta { font-size:11px; color:var(--muted); margin-top:3px; }
+    .config-status { font-size:10px; font-weight:700; padding:3px 10px; border-radius:20px; text-transform:uppercase; }
+    .status-active { background:#d4edda; color:var(--green); }
+    .status-disabled { background:#f0e8d8; color:var(--muted); }
+    .config-actions { display:flex; gap:6px; }
+    .cfg-btn { padding:6px 12px; border-radius:6px; font-size:11px; font-weight:600; cursor:pointer; border:1px solid var(--border); background:var(--surface); color:var(--muted); }
+    .cfg-btn:hover { border-color:var(--gold-light); color:var(--gold); }
+    .cfg-btn.danger:hover { border-color:var(--red); color:var(--red); }
+    .empty-configs { text-align:center; padding:30px; color:var(--muted); font-size:13px; }
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">Land<span>IQ</span></div>
+  <div class="nav-links">
+    <a href="/" class="nav-link">← Back to Analysis</a>
+    <a href="/configurator.html" class="nav-link">Configure Models</a>
+    <a href="/create-configuration.html" class="nav-link active">Create Configuration</a>
+  </div>
+</nav>
+
+<div class="page-header">
+  <div class="page-title">Create LLM Configuration</div>
+  <div class="page-sub">Name your use case, pick models from your pool in priority order, set restrictions, and save. This becomes a selectable LLM Configuration on the analysis form.</div>
+  <div class="step-pill"><b>Step 2 of 2</b> — uses the model pool you built on the previous page</div>
+</div>
+
+<div class="main">
+
+  <!-- Empty pool warning -->
+  <div class="pool-warning" id="poolWarning">
+    ⚠️ Your model pool is empty. <a href="/configurator.html">Go add models with their API keys first</a> before creating a configuration.
+  </div>
+
+  <!-- 1. Use case naming -->
+  <div class="card">
+    <div class="card-title">① Name This Configuration</div>
+    <div class="form-grid">
+      <div>
+        <label>Use Case Name</label>
+        <input type="text" id="usecaseName" placeholder="e.g. landiq" />
+        <div class="field-hint">Letters, numbers, underscore, hyphen only</div>
+      </div>
+      <div>
+        <label>Configuration Name</label>
+        <input type="text" id="configName" placeholder="e.g. default" />
+        <div class="field-hint">Together these form: <span id="fullNamePreview" style="font-family:monospace;color:var(--gold);">usecase_config</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Priority chain -->
+  <div class="card">
+    <div class="card-title">② Select Models &amp; Priority (Chat)</div>
+    <div class="field-hint" style="margin-bottom:14px;">Priority 1 is tried first. If it fails or hits its TPM/RPM limit, the router automatically falls back to priority 2, then 3, and so on.</div>
+    <div class="priority-chain" id="priorityChain"></div>
+    <button class="btn-add-priority" id="addPriorityBtn" onclick="addPriorityRow()">+ Add Priority Level</button>
+  </div>
+
+  <!-- 3. Restrictions -->
+  <div class="card">
+    <div class="card-title">③ Restrictions</div>
+    <div class="restrictions-grid">
+      <div>
+        <label>TPM (tokens / minute)</label>
+        <input type="number" id="restrTpm" value="100000" min="1"/>
+      </div>
+      <div>
+        <label>RPM (requests / minute)</label>
+        <input type="number" id="restrRpm" value="60" min="1"/>
+      </div>
+      <div>
+        <label>TPR (max tokens / response)</label>
+        <input type="number" id="restrTpr" value="4096" min="1"/>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. Guardrails -->
+  <div class="card">
+    <div class="card-title">④ Guardrails</div>
+    <div class="guardrails-row">
+      <div class="gr-toggle">
+        <label class="toggle"><input type="checkbox" id="grPii"/><span class="slider"></span></label>
+        <span style="font-size:13px;">PII Masking <span style="color:var(--muted);font-size:11px;">— redacts emails in user messages</span></span>
+      </div>
+      <div class="gr-toggle">
+        <label class="toggle"><input type="checkbox" id="grProfanity"/><span class="slider"></span></label>
+        <span style="font-size:13px;">Profanity Filter</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="error-box" id="errorBox"></div>
+  <div class="success-box" id="successBox"></div>
+
+  <button class="btn-save-config" id="saveBtn" onclick="saveConfiguration()">💾 Save LLM Configuration</button>
+
+  <!-- Existing configurations -->
+  <div class="card" style="margin-top:8px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+      <div class="card-title" style="margin:0;">📋 Saved Configurations</div>
+      <a href="/llm-setup.html" style="font-size:12px; color:var(--gold); text-decoration:none; font-weight:600;">Manage, Test & Logs →</a>
+    </div>
+    <div class="config-list" id="configList">
+      <div class="empty-configs">Loading…</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+let pool = [];
+let priorityRows = [];   // [{priority, litellm_model, rpm, tpm}]
+let rowIdCounter = 0;
+
+document.getElementById('usecaseName').addEventListener('input', updateFullNamePreview);
+document.getElementById('configName').addEventListener('input', updateFullNamePreview);
+
+function updateFullNamePreview() {
+  const u = document.getElementById('usecaseName').value.trim() || 'usecase';
+  const c = document.getElementById('configName').value.trim() || 'config';
+  document.getElementById('fullNamePreview').textContent = `${u}_${c}`;
+}
+
+async function loadPool() {
+  try {
+    const res = await fetch('/catalog/global_models');
+    pool = await res.json();
+    document.getElementById('poolWarning').style.display = pool.length === 0 ? 'block' : 'none';
+    document.getElementById('addPriorityBtn').disabled = pool.length === 0;
+    if (pool.length > 0 && priorityRows.length === 0) {
+      addPriorityRow();  // start with one row
+    }
+  } catch(e) { console.error('pool load failed', e); }
+}
+
+function addPriorityRow() {
+  if (pool.length === 0) return;
+  const id = rowIdCounter++;
+  priorityRows.push({ id, litellm_model: '', rpm: '', tpm: '' });
+  renderPriorityChain();
+}
+
+function removePriorityRow(id) {
+  priorityRows = priorityRows.filter(r => r.id !== id);
+  renderPriorityChain();
+}
+
+function updatePriorityField(id, field, value) {
+  const row = priorityRows.find(r => r.id === id);
+  if (row) row[field] = value;
+}
+
+function renderPriorityChain() {
+  const box = document.getElementById('priorityChain');
+  if (priorityRows.length === 0) {
+    box.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-size:12px;">No priority levels yet. Click "+ Add Priority Level" below.</div>';
+    return;
+  }
+  box.innerHTML = priorityRows.map((row, idx) => {
+    const options = pool.map(m =>
+      `<option value="${m.litellm_model}" ${row.litellm_model===m.litellm_model?'selected':''}>${m.litellm_model} (${m.provider})</option>`
+    ).join('');
+    return `
+    <div class="priority-row">
+      <div class="priority-num">${idx + 1}</div>
+      <select onchange="updatePriorityField(${row.id}, 'litellm_model', this.value)">
+        <option value="">— select a model from your pool —</option>
+        ${options}
+      </select>
+      <div>
+        <input class="pr-rpm" type="number" placeholder="RPM" value="${row.rpm}" onchange="updatePriorityField(${row.id}, 'rpm', this.value)"/>
+        <div class="priority-mini-label">RPM (opt.)</div>
+      </div>
+      <div>
+        <input class="pr-tpm" type="number" placeholder="TPM" value="${row.tpm}" onchange="updatePriorityField(${row.id}, 'tpm', this.value)"/>
+        <div class="priority-mini-label">TPM (opt.)</div>
+      </div>
+      <span class="priority-remove" onclick="removePriorityRow(${row.id})">✕</span>
+    </div>`;
+  }).join('');
+}
+
+async function saveConfiguration() {
+  const errBox = document.getElementById('errorBox');
+  const okBox  = document.getElementById('successBox');
+  errBox.style.display = 'none';
+  okBox.style.display = 'none';
+
+  const usecase = document.getElementById('usecaseName').value.trim();
+  const configName = document.getElementById('configName').value.trim();
+
+  if (!usecase || !configName) {
+    showError('Please enter both a Use Case Name and a Configuration Name.');
+    return;
+  }
+  if (!/^[a-zA-Z0-9_-]+$/.test(usecase) || !/^[a-zA-Z0-9_-]+$/.test(configName)) {
+    showError('Names can only contain letters, numbers, underscore, and hyphen.');
+    return;
+  }
+
+  const validRows = priorityRows.filter(r => r.litellm_model);
+  if (validRows.length === 0) {
+    showError('Select at least one model for the chat priority chain.');
+    return;
+  }
+
+  const chatModels = validRows.map((r, idx) => {
+    const m = { litellm_model: r.litellm_model, priority: idx + 1 };
+    if (r.rpm) m.rpm = parseInt(r.rpm);
+    if (r.tpm) m.tpm = parseInt(r.tpm);
+    return m;
+  });
+
+  const payload = {
+    usecase_name: usecase,
+    config_name: configName,
+    operations: { chat: chatModels },
+    restrictions: {
+      tpm: parseInt(document.getElementById('restrTpm').value) || 100000,
+      rpm: parseInt(document.getElementById('restrRpm').value) || 60,
+      tpr: parseInt(document.getElementById('restrTpr').value) || 4096,
+    },
+    guardrails: {
+      pii_masking: document.getElementById('grPii').checked,
+      profanity_filter: document.getElementById('grProfanity').checked,
+    }
+  };
+
+  const saveBtn = document.getElementById('saveBtn');
+  saveBtn.disabled = true;
+  saveBtn.textContent = 'Saving…';
+
+  try {
+    const res = await fetch('/configs', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      let msg = data.detail;
+      if (Array.isArray(msg)) {
+        msg = msg.map(e => `• ${e.msg}`).join('\n');
+      }
+      showError(msg || 'Failed to save configuration.');
+      return;
+    }
+
+    okBox.textContent = `✓ Configuration "${data.config.full_name}" saved and active. It now appears on the analysis form.`;
+    okBox.style.display = 'block';
+
+    // Reset form
+    document.getElementById('usecaseName').value = '';
+    document.getElementById('configName').value = '';
+    updateFullNamePreview();
+    priorityRows = [];
+    addPriorityRow();
+    await loadConfigs();
+
+  } catch(e) {
+    showError('Could not reach server. Make sure python run.py is running.');
+  } finally {
+    saveBtn.disabled = false;
+    saveBtn.textContent = '💾 Save LLM Configuration';
+  }
+}
+
+function showError(msg) {
+  const errBox = document.getElementById('errorBox');
+  errBox.textContent = msg;
+  errBox.style.display = 'block';
+}
+
+async function loadConfigs() {
+  const list = document.getElementById('configList');
+  try {
+    const res = await fetch('/configs');
+    const configs = await res.json();
+    if (configs.length === 0) {
+      list.innerHTML = '<div class="empty-configs">No configurations saved yet. Create one above.</div>';
+      return;
+    }
+    list.innerHTML = configs.map(c => `
+      <div class="config-row${c.status !== 'active' ? ' disabled-config' : ''}">
+        <div>
+          <div class="config-name">${c.full_name}</div>
+          <div class="config-meta">${(c.operations_present || []).join(', ')} • RPM ${c.restrictions?.rpm ?? '-'} • TPM ${c.restrictions?.tpm ?? '-'}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span class="config-status ${c.status === 'active' ? 'status-active' : 'status-disabled'}">${c.status}</span>
+          <div class="config-actions">
+            ${c.status === 'active'
+              ? `<button class="cfg-btn" onclick="disableConfig('${c.full_name}')">Disable</button>`
+              : `<button class="cfg-btn" onclick="enableConfig('${c.full_name}')">Enable</button>`}
+            <button class="cfg-btn danger" onclick="deleteConfigConfirm('${c.full_name}')">Delete</button>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  } catch(e) {
+    list.innerHTML = '<div class="empty-configs">Could not load configurations.</div>';
+  }
+}
+
+async function enableConfig(name) {
+  await fetch(`/configs/${name}/enable`, {method:'POST'});
+  loadConfigs();
+}
+async function disableConfig(name) {
+  await fetch(`/configs/${name}/disable`, {method:'POST'});
+  loadConfigs();
+}
+async function deleteConfigConfirm(name) {
+  if (!confirm(`Delete configuration "${name}"? This cannot be undone.`)) return;
+  await fetch(`/configs/${name}`, {method:'DELETE'});
+  loadConfigs();
+}
+
+window.addEventListener('load', async () => {
+  updateFullNamePreview();
+  await loadPool();
+  renderPriorityChain();
+  await loadConfigs();
+});
+</script>
+</body>
+</html>

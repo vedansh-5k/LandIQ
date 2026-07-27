@@ -1,0 +1,1042 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>LLM Setup — LandIQ</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg:#f5f0e8; --surface:#faf7f2; --border:#e2d9c8;
+      --gold:#8B6914; --gold-light:#c9a96e;
+      --text:#1a1208; --muted:#7a6a52;
+      --green:#2d7a4f; --red:#c0392b;
+      --radius:12px; --shadow:0 2px 12px rgba(139,105,20,.10);
+    }
+    *{box-sizing:border-box;margin:0;padding:0;}
+    body{background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;min-height:100vh;}
+
+    /* ── NAV ─────────────────────── */
+    nav{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 32px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+    .logo{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:var(--text);}
+    .logo span{color:var(--gold);}
+    .logo-sub{font-size:11px;color:var(--muted);margin-top:1px;}
+    .nav-right{display:flex;align-items:center;gap:10px;}
+    .nav-link{padding:8px 16px;border-radius:8px;font-size:13px;font-weight:500;color:var(--muted);text-decoration:none;transition:all .2s;}
+    .nav-link:hover{background:var(--bg);color:var(--gold);}
+    .nav-btn{background:var(--gold);color:#fff;border:none;border-radius:8px;padding:9px 20px;font-size:13px;font-weight:600;cursor:pointer;}
+    .nav-btn:hover{background:var(--gold-light);}
+
+    /* ── PAGE ────── */
+    .page-wrap{max-width:1100px;margin:0 auto;padding:32px 32px 60px;}
+    .page-head{margin-bottom:28px;}
+    .page-title{font-family:'Playfair Display',serif;font-size:28px;font-weight:700;color:var(--text);}
+    .page-sub{font-size:14px;color:var(--muted);margin-top:6px;line-height:1.6;}
+
+    .tab-bar{display:flex;border-bottom:1px solid var(--border);margin-bottom:28px;}
+    .tab-btn{padding:12px 22px;font-size:13px;font-weight:500;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .2s;background:none;border-top:none;border-left:none;border-right:none;}
+    .tab-btn.active{color:var(--gold);border-bottom-color:var(--gold);font-weight:600;}
+    .tab-btn:hover:not(.active){color:var(--text);}
+
+    .tab-pane{display:none;}
+    .tab-pane.active{display:block;}
+
+    /* ── CARD ────── */
+    .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:24px;margin-bottom:20px;}
+    .section-label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:16px;}
+    .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:16px;}
+    .form-grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px;margin-bottom:16px;}
+    label{display:block;font-size:12px;font-weight:500;color:var(--muted);margin-bottom:6px;}
+    input,select,textarea{width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:14px;font-family:'Inter',sans-serif;outline:none;transition:border .2s;}
+    input:focus,select:focus,textarea:focus{border-color:var(--gold-light);}
+    .field-hint{font-size:11px;color:var(--muted);margin-top:4px;}
+    .divider{border:none;border-top:1px solid var(--border);margin:20px 0;}
+
+    /* ── BUTTONS ────── */
+    .btn-primary{background:var(--gold);color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:13px;font-weight:600;cursor:pointer;transition:background .2s;}
+    .btn-primary:hover{background:#a07820;}
+    .btn-primary:disabled{background:var(--border);color:var(--muted);cursor:not-allowed;}
+    .btn-outline{background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:9px 18px;font-size:13px;font-weight:500;cursor:pointer;transition:all .2s;}
+    .btn-outline:hover{border-color:var(--gold-light);color:var(--gold);}
+    .btn-sm{padding:6px 12px;font-size:11px;font-weight:600;border-radius:6px;}
+    .btn-danger{color:var(--red);}
+    .btn-danger:hover{border-color:var(--red);}
+    .btn-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center;}
+
+    /* ── BADGES ────── */
+    .badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:10px;font-weight:700;text-transform:uppercase;}
+    .badge-active{background:#d4edda;color:var(--green);}
+    .badge-disabled{background:#f0e8d8;color:var(--muted);}
+    .badge-ok{background:#d4edda;color:var(--green);}
+    .badge-fail{background:#fde8e8;color:var(--red);}
+
+    /* ── CONFIG TABLE ────── */
+    .config-table{width:100%;border-collapse:collapse;font-size:13px;}
+    .config-table th{text-align:left;padding:8px 12px;font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--border);}
+    .config-table td{padding:12px;border-bottom:1px solid var(--border);vertical-align:middle;}
+    .config-table tr:last-child td{border-bottom:none;}
+    .config-table tr:hover td{background:var(--bg);}
+    .config-table tr.clickable-row{cursor:pointer;transition:all .15s;}
+    .config-table tr.clickable-row:hover td{background:#eee8d5;border-bottom-color:var(--gold-light);}
+    .config-name{font-weight:600;font-size:14px;}
+    .config-name-link{color:var(--gold);text-decoration:underline;cursor:pointer;}
+    .config-name-link:hover{color:#a07820;}
+    .model-chain{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;}
+    .model-chip{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:2px 8px;font-size:10px;font-family:monospace;color:var(--muted);}
+    .model-chip b{color:var(--gold);margin-right:3px;}
+
+    /* ── PRIORITY CHAIN BUILDER ────── */
+    .priority-chain{display:flex;flex-direction:column;gap:8px;margin-bottom:12px;}
+    .priority-row{display:flex;align-items:center;gap:10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 14px;}
+    .pr-num{width:24px;height:24px;background:var(--gold);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;}
+    .priority-row select{flex:1;margin:0;}
+    .pr-remove{cursor:pointer;color:var(--muted);font-size:18px;padding:2px 6px;flex-shrink:0;}
+    .pr-remove:hover{color:var(--red);}
+    .btn-add-priority{width:100%;padding:10px;background:var(--surface);border:1.5px dashed var(--gold-light);border-radius:8px;color:var(--gold);font-size:13px;font-weight:600;cursor:pointer;}
+    .btn-add-priority:hover{background:var(--bg);}
+    .btn-add-priority:disabled{opacity:.4;cursor:not-allowed;}
+
+    /* ── CATALOGUE ────── */
+    .catalogue-layout{display:grid;grid-template-columns:1fr 340px;gap:20px;align-items:start;}
+    .cat-search-row{display:flex;gap:10px;margin-bottom:12px;}
+    .cat-search-row input{flex:1;}
+    .provider-pills{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;}
+    .ppill{padding:5px 14px;border:1px solid var(--border);border-radius:20px;font-size:12px;color:var(--muted);background:var(--bg);cursor:pointer;transition:all .2s;}
+    .ppill.active{background:var(--gold);color:#fff;border-color:var(--gold);}
+    .ppill:hover:not(.active){border-color:var(--gold-light);color:var(--gold);}
+    .cat-list{max-height:520px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;}
+    .cat-item{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--bg);border:1px solid var(--border);border-radius:8px;transition:border-color .2s;}
+    .cat-item:hover{border-color:var(--gold-light);}
+    .cat-item.in-pool{border-color:var(--green);background:#f0f9f2;}
+    .cat-model-name{font-size:13px;font-weight:600;font-family:monospace;word-break:break-all;}
+    .cat-model-meta{font-size:11px;color:var(--muted);margin-top:3px;display:flex;gap:8px;flex-wrap:wrap;}
+    .meta-pill{background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:1px 7px;}
+    .pool-card{position:sticky;top:80px;}
+    .pool-badge{background:var(--gold);color:#fff;border-radius:20px;padding:1px 9px;font-size:10px;font-weight:700;margin-left:6px;}
+    .pool-item{display:flex;align-items:center;justify-content:space-between;padding:9px 12px;background:var(--bg);border:1px solid var(--border);border-radius:7px;margin-bottom:6px;}
+    .pool-item-name{font-size:12px;font-weight:600;font-family:monospace;word-break:break-all;}
+    .pool-item-meta{font-size:10px;color:var(--muted);margin-top:2px;}
+    .pool-remove{cursor:pointer;color:var(--muted);padding:3px 7px;font-size:14px;flex-shrink:0;}
+    .pool-remove:hover{color:var(--red);}
+
+    /* ── TEST BOARD ────── */
+    .test-output{background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:16px;font-family:monospace;font-size:12px;color:#e6edf3;min-height:100px;white-space:pre-wrap;margin-top:14px;line-height:1.6;}
+    .test-meta-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-top:12px;}
+    .test-meta-item{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 12px;}
+    .test-meta-key{font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.4px;}
+    .test-meta-val{font-size:14px;font-weight:600;color:var(--text);margin-top:3px;}
+
+    /* ── LOGS TABLE ────── */
+    .logs-table{width:100%;border-collapse:collapse;font-size:12px;}
+    .logs-table th{text-align:left;padding:8px 10px;font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border);white-space:nowrap;}
+    .logs-table td{padding:9px 10px;border-bottom:1px solid var(--border);vertical-align:middle;font-family:monospace;}
+    .logs-table tr:last-child td{border-bottom:none;}
+    .logs-table tr.ok-row td:first-child{border-left:3px solid var(--green);}
+    .logs-table tr.fail-row td:first-child{border-left:3px solid var(--red);}
+    .truncate{max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .log-toolbar{display:flex;align-items:center;gap:10px;margin-bottom:16px;}
+    .log-toolbar select{width:200px;}
+
+    /* ── DETAIL PANEL ────── */
+    .detail-panel{display:none;animation:fadeIn .25s ease;}
+    .detail-panel.open{display:block;}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+    .detail-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;gap:16px;}
+    .detail-back{display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:600;color:var(--gold);background:none;border:none;padding:8px 16px;border-radius:8px;transition:all .2s;}
+    .detail-back:hover{background:var(--bg);}
+    .detail-title-area{flex:1;}
+    .detail-name{font-family:'Playfair Display',serif;font-size:24px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:12px;}
+    .detail-meta{font-size:12px;color:var(--muted);margin-top:4px;}
+    .detail-actions{display:flex;gap:8px;}
+    .detail-tabs{display:flex;gap:0;margin-bottom:20px;border-bottom:1px solid var(--border);}
+    .detail-tab{padding:10px 20px;font-size:13px;font-weight:500;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .2s;background:none;border-top:none;border-left:none;border-right:none;}
+    .detail-tab.active{color:var(--gold);border-bottom-color:var(--gold);font-weight:600;}
+    .detail-tab:hover:not(.active){color:var(--text);}
+    .detail-tab-pane{display:none;}
+    .detail-tab-pane.active{display:block;}
+    .chain-display{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:8px;}
+    .chain-arrow{color:var(--gold-light);font-size:14px;}
+
+    /* ── MODAL ────── */
+    .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;padding:20px;}
+    .modal-overlay.open{display:flex;}
+    .modal{background:var(--surface);border-radius:var(--radius);padding:28px;width:100%;max-width:580px;max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.25);}
+    .modal-title{font-family:'Playfair Display',serif;font-size:20px;font-weight:700;margin-bottom:4px;}
+    .modal-sub{font-size:12px;color:var(--muted);margin-bottom:22px;line-height:1.6;}
+    .modal-actions{display:flex;gap:10px;margin-top:22px;}
+
+    /* ── ALERTS ────── */
+    .alert{padding:10px 14px;border-radius:8px;font-size:12px;margin-bottom:14px;display:none;line-height:1.5;}
+    .alert-error{background:#fff5f5;border:1px solid #f5c6cb;color:var(--red);}
+    .alert-success{background:#f0f9f2;border:1px solid #b8e0c4;color:var(--green);}
+    .spinner{display:inline-block;width:13px;height:13px;border:2px solid var(--border);border-top-color:var(--gold);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:5px;}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .empty{text-align:center;padding:36px 20px;color:var(--muted);font-size:13px;}
+    .empty-icon{font-size:30px;opacity:.35;margin-bottom:10px;}
+
+    /* ── CONFIG INFO GRID ────── */
+    .info-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;margin-bottom:20px;}
+    .info-item{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 14px;}
+    .info-label{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;}
+    .info-value{font-size:15px;font-weight:600;color:var(--text);}
+  </style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div>
+    <div class="logo">Land<span>IQ</span></div>
+    <div class="logo-sub">Indian Land Investment Advisor</div>
+  </div>
+  <div class="nav-right">
+    <a href="/" class="nav-link">← Back to Analysis</a>
+    <a href="/configurator.html" class="nav-link">Configure Models</a>
+    <a href="/create-configuration.html" class="nav-link">Create Config</a>
+    <button class="nav-btn" onclick="window.location.href='/'">Start Free Analysis</button>
+  </div>
+</nav>
+
+<div class="page-wrap">
+  <div class="page-head">
+    <div class="page-title">LLM Setup</div>
+    <div class="page-sub">Manage your model pool, LLM configurations, test model switching, and view request logs.</div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tab-bar" id="mainTabBar">
+    <button class="tab-btn active" onclick="switchTab('configs',this)">⚙️ Active Configurations</button>
+    <button class="tab-btn" onclick="switchTab('models',this)">🗄️ Model Pool</button>
+    <button class="tab-btn" onclick="switchTab('testboard',this)">🧪 Test Board</button>
+    <button class="tab-btn" onclick="switchTab('logs',this)">📋 Request Logs</button>
+  </div>
+
+  <!-- ══ TAB 1: ACTIVE CONFIGURATIONS ══════════════════════ -->
+  <div class="tab-pane active" id="tab-configs">
+    <!-- Config List View -->
+    <div id="configListView">
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;">
+          <div class="section-label" style="margin:0;">LLM Configurations</div>
+          <button class="btn-primary" onclick="openCreateModal()">+ Create New</button>
+        </div>
+        <div id="configsList"><div class="empty"><div class="empty-icon">⚙️</div>Loading…</div></div>
+      </div>
+    </div>
+
+    <!-- Config Detail Panel (shown when clicking a config) -->
+    <div class="detail-panel" id="configDetailPanel">
+      <div class="detail-header">
+        <button class="detail-back" onclick="closeDetailPanel()">← Back to Configurations</button>
+        <div class="detail-title-area">
+          <div class="detail-name">
+            <span id="detailConfigName">—</span>
+            <span id="detailConfigBadge" class="badge badge-active">active</span>
+          </div>
+          <div class="detail-meta" id="detailConfigMeta">—</div>
+        </div>
+        <div class="detail-actions">
+          <button class="btn-outline btn-sm" id="detailToggleBtn" onclick="detailToggleStatus()">Disable</button>
+          <button class="btn-outline btn-sm" onclick="detailEdit()">✎ Edit</button>
+          <button class="btn-outline btn-sm btn-danger" onclick="detailDelete()">✕ Delete</button>
+        </div>
+      </div>
+
+      <!-- Config Info -->
+      <div class="card" id="detailInfoCard">
+        <div class="section-label">Configuration Details</div>
+        <div class="info-grid" id="detailInfoGrid"></div>
+        <div class="section-label" style="margin-top:8px;">Priority Chain</div>
+        <div class="chain-display" id="detailChainDisplay"></div>
+      </div>
+
+      <!-- Detail sub-tabs: Test Board | Request Logs -->
+      <div class="detail-tabs">
+        <button class="detail-tab active" onclick="switchDetailTab('test',this)">🧪 Test Board</button>
+        <button class="detail-tab" onclick="switchDetailTab('logs',this)">📋 Request Logs</button>
+      </div>
+
+      <!-- Detail: Test Board -->
+      <div class="detail-tab-pane active" id="dtab-test">
+        <div class="card">
+          <div class="section-label">🧪 Test this Configuration</div>
+          <div style="margin-bottom:14px;">
+            <label>Max Tokens</label>
+            <input type="number" id="detailMaxTok" value="120" min="10" max="2000" style="max-width:180px;"/>
+          </div>
+          <div style="margin-bottom:14px;">
+            <label>Test Prompt</label>
+            <textarea id="detailPrompt" rows="3" style="resize:vertical;">Hello! Which AI model are you and what is your provider? Answer in one sentence.</textarea>
+          </div>
+          <div class="alert alert-error" id="detailTestErr"></div>
+          <button class="btn-primary" id="detailTestBtn" onclick="runDetailTest()" style="width:100%;padding:12px;font-size:14px;">▶ Run Test</button>
+          <div id="detailTestResultBox" style="display:none;">
+            <div class="test-output" id="detailTestOutput"></div>
+            <div class="test-meta-grid" id="detailTestMeta"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="section-label" style="margin-bottom:14px;">Recent Test Results</div>
+          <div id="detailRecentTests"><div class="empty"><div class="empty-icon">🧪</div>Run a test above</div></div>
+        </div>
+      </div>
+
+      <!-- Detail: Request Logs -->
+      <div class="detail-tab-pane" id="dtab-logs">
+        <div class="card">
+          <div class="log-toolbar">
+            <div class="section-label" style="margin:0;flex:1;">📋 Request Logs for this Configuration</div>
+            <button class="btn-outline btn-sm" onclick="loadDetailLogs()">↻ Refresh</button>
+          </div>
+          <div style="overflow-x:auto;">
+            <table class="logs-table">
+              <thead>
+                <tr>
+                  <th>#</th><th>Time</th><th>Agent</th><th>Model Used</th>
+                  <th>In</th><th>Out</th><th>Total</th>
+                  <th>Cost USD</th><th>Latency</th><th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="detailLogsBody">
+                <tr><td colspan="10" class="empty">Loading…</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ TAB 2: MODEL POOL ══════════════════════════════════ -->
+  <div class="tab-pane" id="tab-models">
+    <div class="catalogue-layout">
+      <div class="card">
+        <div class="section-label">📚 Model Catalogue</div>
+        <div class="cat-search-row">
+          <input id="catQ" type="text" placeholder="Search models — e.g. llama, claude, gpt-4…" oninput="debSearch()"/>
+        </div>
+        <div class="provider-pills" id="providerPills">
+          <button class="ppill active" data-p="" onclick="pickProvider('',this)">All</button>
+        </div>
+        <div class="cat-list" id="catList"><div class="empty">Loading…</div></div>
+      </div>
+      <div class="card pool-card">
+        <div class="section-label" style="margin-bottom:14px;">✓ Your Model Pool <span class="pool-badge" id="poolBadge">0</span></div>
+        <div id="poolList"><div class="empty" style="padding:20px 0;">No models added yet</div></div>
+        <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border);">
+          <button class="btn-primary" style="width:100%;" onclick="window.location.href='/create-configuration.html'">Next: Create Configuration →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ TAB 3: TEST BOARD (standalone) ══════════════════════════════════ -->
+  <div class="tab-pane" id="tab-testboard">
+    <div class="card">
+      <div class="section-label">🧪 Test Board — verify model switching works live</div>
+      <div class="form-grid">
+        <div>
+          <label>LLM Configuration</label>
+          <select id="testCfg"><option value="">Select configuration…</option></select>
+        </div>
+        <div>
+          <label>Max Tokens</label>
+          <input type="number" id="testMaxTok" value="120" min="10" max="2000"/>
+        </div>
+      </div>
+      <div style="margin-bottom:14px;">
+        <label>Test Prompt</label>
+        <textarea id="testPrompt" rows="3" style="resize:vertical;">Hello! Which AI model are you and what is your provider? Answer in one sentence.</textarea>
+      </div>
+      <div class="alert alert-error" id="testErr"></div>
+      <button class="btn-primary" id="testRunBtn" onclick="runTest()" style="width:100%;padding:12px;font-size:14px;">▶ Run Test</button>
+      <div id="testResultBox" style="display:none;">
+        <div class="test-output" id="testOutput"></div>
+        <div class="test-meta-grid" id="testMeta"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-label" style="margin-bottom:14px;">Recent Test Results</div>
+      <div id="recentTests"><div class="empty"><div class="empty-icon">🧪</div>Run a test above</div></div>
+    </div>
+  </div>
+
+  <!-- ══ TAB 4: REQUEST LOGS (standalone) ════════════════════════════════ -->
+  <div class="tab-pane" id="tab-logs">
+    <div class="card">
+      <div class="log-toolbar">
+        <div class="section-label" style="margin:0;flex:1;">📋 All Request Logs</div>
+        <select id="logFilter" onchange="loadLogs()" style="width:200px;">
+          <option value="">All configurations</option>
+        </select>
+        <button class="btn-outline btn-sm" onclick="loadLogs()">↻ Refresh</button>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="logs-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Start Time</th>
+              <th>Config</th>
+              <th>Agent</th>
+              <th>Model Used</th>
+              <th>API Key</th>
+              <th>In</th>
+              <th>Out</th>
+              <th>Total Tokens</th>
+              <th>Cost USD</th>
+              <th>Latency</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="logsBody">
+            <tr><td colspan="12" class="empty">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL: Create / Edit Config ══════════════════════════ -->
+<div class="modal-overlay" id="cfgModal">
+  <div class="modal">
+    <div class="modal-title" id="cfgModalTitle">Create LLM Configuration</div>
+    <div class="modal-sub">Name it, choose models in priority order from your pool, set limits.</div>
+    <div class="alert alert-error" id="cfgModalErr"></div>
+
+    <div class="form-grid" id="nameFields">
+      <div>
+        <label>Use Case Name *</label>
+        <input id="mUsecaseName" type="text" placeholder="e.g. landiq"/>
+        <div class="field-hint">Letters, numbers, underscore, hyphen only</div>
+      </div>
+      <div>
+        <label>Config Name *</label>
+        <input id="mConfigName" type="text" placeholder="e.g. default"/>
+        <div class="field-hint">Forms: <span id="namePreview" style="font-family:monospace;color:var(--gold);">usecase_config</span></div>
+      </div>
+    </div>
+
+    <div style="margin-bottom:16px;">
+      <label>Chat Model Priority Chain</label>
+      <div class="field-hint" style="margin-bottom:10px;">Priority 1 is tried first. Router falls back to priority 2, 3… automatically when a model hits its limit or fails.</div>
+      <div class="priority-chain" id="mPriorityChain"></div>
+      <button class="btn-add-priority" id="mAddPrBtn" onclick="addModalPrRow()">+ Add Priority Level</button>
+    </div>
+
+    <div class="form-grid-3">
+      <div><label>TPM (tokens/min)</label><input id="mTpm" type="number" value="100000"/></div>
+      <div><label>RPM (requests/min)</label><input id="mRpm" type="number" value="60"/></div>
+      <div><label>TPR (max tokens/response)</label><input id="mTpr" type="number" value="4096"/></div>
+    </div>
+
+    <div style="display:flex;gap:24px;margin-top:6px;">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;text-transform:none;font-weight:400;color:var(--text);">
+        <input type="checkbox" id="mPii" style="width:auto;accent-color:var(--gold);"/> PII Masking
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;text-transform:none;font-weight:400;color:var(--text);">
+        <input type="checkbox" id="mProfanity" style="width:auto;accent-color:var(--gold);"/> Profanity Filter
+      </label>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn-primary" id="cfgSaveBtn" onclick="saveConfig()">Save Configuration</button>
+      <button class="btn-outline" onclick="closeCfgModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL: Add Model (API key) ══════════════════════════ -->
+<div class="modal-overlay" id="addModelModal">
+  <div class="modal" style="max-width:440px;">
+    <div class="modal-title">Add Model to Pool</div>
+    <div class="modal-sub" id="addModelSub">Enter the API key for this provider.</div>
+    <div class="alert alert-error" id="addModelErr"></div>
+    <div style="margin-bottom:14px;">
+      <label>API Key *</label>
+      <input id="addModelKey" type="password" placeholder="sk-… / gsk_… / AQ.…"/>
+    </div>
+    <div>
+      <label>API Base (optional — for self-hosted / Ollama)</label>
+      <input id="addModelBase" type="text" placeholder="Leave blank unless self-hosted"/>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-primary" onclick="saveModelKey()">✓ Add to Pool</button>
+      <button class="btn-outline" onclick="closeAddModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── GLOBAL STATE ────────────────────────────────────────────
+let pool = [], configs = [], catModels = [];
+let modalMode = 'create', editingName = null;
+let mRows = [], mRowId = 0;
+let pendingModel = null;
+let recentTests = [];
+let catTimer = null, catProvider = '';
+
+// Detail panel state
+let activeDetailConfig = null;
+let detailTestHistory = [];
+
+// ── TABS ─────────────────────────────────────────────────────
+function switchTab(id, btn) {
+  document.querySelectorAll('#mainTabBar .tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.page-wrap > .tab-pane').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-' + id).classList.add('active');
+  if (id === 'configs')   { closeDetailPanel(); loadConfigs(); }
+  if (id === 'models')    { loadProviders(); loadCat(); loadPool(); }
+  if (id === 'testboard') { loadTestCfgs(); }
+  if (id === 'logs')      loadLogs();
+}
+
+function switchDetailTab(id, btn) {
+  document.querySelectorAll('.detail-tab').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.detail-tab-pane').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('dtab-' + id).classList.add('active');
+  if (id === 'logs') loadDetailLogs();
+}
+
+// ══════════════════════════════════════════════════════════════
+// TAB 1 — CONFIGURATIONS
+// ══════════════════════════════════════════════════════════════
+async function loadConfigs() {
+  const el = document.getElementById('configsList');
+  try {
+    const r = await fetch('/configs'); configs = await r.json();
+    if (!configs.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">⚙️</div>No configurations yet. Click "+ Create New" above.</div>'; return; }
+    el.innerHTML = `<table class="config-table">
+      <thead><tr><th>Configuration</th><th>Status</th><th>Chat Priority Chain</th><th>Limits</th><th>Actions</th></tr></thead>
+      <tbody>${configs.map(c => {
+        const chain = (c.operations_detail?.chat || []).sort((a,b) => a.priority - b.priority)
+          .map(m => `<span class="model-chip"><b>P${m.priority}</b>${m.litellm_model}</span>`).join('');
+        const r = c.restrictions || {};
+        return `<tr class="clickable-row" onclick="openDetailPanel('${c.full_name}')">
+          <td><div class="config-name config-name-link">${c.full_name}</div></td>
+          <td><span class="badge badge-${c.status}">${c.status}</span></td>
+          <td><div class="model-chain">${chain || '—'}</div></td>
+          <td style="font-size:11px;font-family:monospace;">${r.rpm ?? '-'} RPM<br/>${r.tpm ?? '-'} TPM<br/>${r.tpr ?? '-'} TPR</td>
+          <td><div class="btn-row" onclick="event.stopPropagation()">
+            <button class="btn-outline btn-sm" onclick="openDetailPanel('${c.full_name}')">▶ Open</button>
+            ${c.status === 'active'
+              ? `<button class="btn-outline btn-sm" onclick="setStatus('${c.full_name}','disable')">Disable</button>`
+              : `<button class="btn-outline btn-sm" onclick="setStatus('${c.full_name}','enable')">Enable</button>`}
+            <button class="btn-outline btn-sm btn-danger" onclick="delConfig('${c.full_name}')">✕</button>
+          </div></td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table>`;
+  } catch(e) { el.innerHTML = '<div class="empty">Could not load — is server running?</div>'; }
+}
+
+async function setStatus(name, action) {
+  await fetch(`/configs/${name}/${action}`, { method: 'POST' });
+  loadConfigs();
+  if (activeDetailConfig === name) openDetailPanel(name);
+}
+
+async function delConfig(name) {
+  if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
+  await fetch(`/configs/${name}`, { method: 'DELETE' });
+  if (activeDetailConfig === name) closeDetailPanel();
+  loadConfigs();
+}
+
+// ── DETAIL PANEL ──────────────────────────────────────────────
+async function openDetailPanel(fullName) {
+  activeDetailConfig = fullName;
+  detailTestHistory = [];
+
+  document.getElementById('configListView').style.display = 'none';
+  const panel = document.getElementById('configDetailPanel');
+  panel.classList.add('open');
+
+  // Fetch config detail
+  try {
+    const r = await fetch(`/configs/${fullName}`);
+    const cfg = await r.json();
+
+    document.getElementById('detailConfigName').textContent = cfg.full_name || fullName;
+    const badge = document.getElementById('detailConfigBadge');
+    badge.textContent = cfg.status || 'active';
+    badge.className = `badge badge-${cfg.status || 'active'}`;
+
+    const meta = [];
+    if (cfg.created_at) meta.push('Created: ' + cfg.created_at.replace('T',' ').slice(0,19));
+    if (cfg.updated_at) meta.push('Updated: ' + cfg.updated_at.replace('T',' ').slice(0,19));
+    document.getElementById('detailConfigMeta').textContent = meta.join(' · ') || '—';
+
+    // Toggle button
+    const togBtn = document.getElementById('detailToggleBtn');
+    if (cfg.status === 'active') {
+      togBtn.textContent = 'Disable';
+      togBtn.onclick = () => { setStatus(fullName, 'disable'); };
+    } else {
+      togBtn.textContent = 'Enable';
+      togBtn.onclick = () => { setStatus(fullName, 'enable'); };
+    }
+
+    // Info grid
+    const rest = cfg.restrictions || {};
+    document.getElementById('detailInfoGrid').innerHTML = [
+      ['RPM Limit', rest.rpm ?? '—'],
+      ['TPM Limit', (rest.tpm ?? '—').toLocaleString?.() || rest.tpm || '—'],
+      ['TPR Limit', rest.tpr ?? '—'],
+      ['PII Masking', cfg.guardrails?.pii_masking ? '✅ Enabled' : '❌ Off'],
+      ['Profanity Filter', cfg.guardrails?.profanity_filter ? '✅ Enabled' : '❌ Off'],
+      ['Status', cfg.status?.toUpperCase() || '—'],
+    ].map(([k,v]) => `<div class="info-item"><div class="info-label">${k}</div><div class="info-value">${v}</div></div>`).join('');
+
+    // Chain display
+    const chatModels = (cfg.operations?.chat || []).sort((a,b) => a.priority - b.priority);
+    document.getElementById('detailChainDisplay').innerHTML = chatModels.map((m, i) =>
+      `<span class="model-chip"><b>P${m.priority}</b> ${m.litellm_model}</span>${i < chatModels.length - 1 ? '<span class="chain-arrow">→</span>' : ''}`
+    ).join('') || '<span style="color:var(--muted);font-size:12px;">No models configured</span>';
+
+  } catch(e) {
+    document.getElementById('detailInfoGrid').innerHTML = '<div class="empty">Could not load config details</div>';
+  }
+
+  // Reset test UI
+  document.getElementById('detailTestErr').style.display = 'none';
+  document.getElementById('detailTestResultBox').style.display = 'none';
+  document.getElementById('detailRecentTests').innerHTML = '<div class="empty"><div class="empty-icon">🧪</div>Run a test above</div>';
+
+  // Load logs
+  loadDetailLogs();
+  // Switch to test tab by default
+  document.querySelectorAll('.detail-tab')[0].click();
+}
+
+function closeDetailPanel() {
+  activeDetailConfig = null;
+  document.getElementById('configDetailPanel').classList.remove('open');
+  document.getElementById('configListView').style.display = 'block';
+}
+
+async function detailEdit() {
+  if (!activeDetailConfig) return;
+  await openEdit(activeDetailConfig);
+}
+
+async function detailDelete() {
+  if (!activeDetailConfig) return;
+  await delConfig(activeDetailConfig);
+}
+
+async function detailToggleStatus() {
+  if (!activeDetailConfig) return;
+  const badge = document.getElementById('detailConfigBadge');
+  const action = badge.textContent.trim() === 'active' ? 'disable' : 'enable';
+  await setStatus(activeDetailConfig, action);
+}
+
+// ── DETAIL: TEST ──────────────────────────────────────────────
+async function runDetailTest() {
+  if (!activeDetailConfig) return;
+  const prompt = document.getElementById('detailPrompt').value.trim();
+  const maxTok = parseInt(document.getElementById('detailMaxTok').value) || 120;
+  const err = document.getElementById('detailTestErr');
+  err.style.display = 'none';
+  if (!prompt) { err.textContent = 'Enter a prompt.'; err.style.display = 'block'; return; }
+
+  const btn = document.getElementById('detailTestBtn');
+  btn.innerHTML = '<span class="spinner"></span>Testing…'; btn.disabled = true;
+  document.getElementById('detailTestResultBox').style.display = 'none';
+
+  try {
+    const r = await fetch(`/test/${activeDetailConfig}`, { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ prompt, max_tokens: maxTok }) });
+    const d = await r.json();
+    if (!r.ok) { err.textContent = d.detail || 'Test failed'; err.style.display = 'block'; return; }
+
+    document.getElementById('detailTestResultBox').style.display = 'block';
+    document.getElementById('detailTestOutput').textContent = d.response || '(empty response)';
+    document.getElementById('detailTestMeta').innerHTML = [
+      ['Model Used',   d.model_used || '—'],
+      ['Config',       d.config],
+      ['Prompt Tokens', d.prompt_tokens],
+      ['Completion',   d.completion_tokens],
+      ['Total Tokens', d.total_tokens],
+      ['Latency',      (d.latency_ms||0).toFixed(0)+'ms'],
+      ['Start Time',   (d.start_time||'').replace('T',' ').slice(0,19)],
+      ['End Time',     (d.end_time||'').replace('T',' ').slice(0,19)],
+      ['Est. Cost',    '$'+(d.estimated_cost_usd||0).toFixed(6)],
+    ].map(([k,v]) => `<div class="test-meta-item"><div class="test-meta-key">${k}</div><div class="test-meta-val">${v}</div></div>`).join('');
+
+    detailTestHistory.unshift(d);
+    renderDetailRecentTests();
+    // Also refresh logs
+    loadDetailLogs();
+  } catch(e) { err.textContent = 'Could not reach server.'; err.style.display = 'block'; }
+  finally { btn.innerHTML = '▶ Run Test'; btn.disabled = false; }
+}
+
+function renderDetailRecentTests() {
+  const el = document.getElementById('detailRecentTests');
+  if (!detailTestHistory.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">🧪</div>No tests run yet</div>'; return; }
+  el.innerHTML = `<table class="logs-table"><thead><tr><th>Time</th><th>Model Used</th><th>Tokens</th><th>Latency</th><th>Response</th></tr></thead>
+    <tbody>${detailTestHistory.slice(0,10).map(t => `<tr class="ok-row">
+      <td>${(t.start_time||'').slice(11,19)}</td>
+      <td class="truncate">${t.model_used||'—'}</td>
+      <td>${t.total_tokens}</td>
+      <td>${(t.latency_ms||0).toFixed(0)}ms</td>
+      <td style="font-family:sans-serif;font-size:12px;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${t.response||'—'}</td>
+    </tr>`).join('')}</tbody></table>`;
+}
+
+// ── DETAIL: LOGS ──────────────────────────────────────────────
+async function loadDetailLogs() {
+  if (!activeDetailConfig) return;
+  const tbody = document.getElementById('detailLogsBody');
+  try {
+    const r = await fetch(`/logs/${activeDetailConfig}?limit=50`);
+    const d = await r.json();
+    const logs = d.logs || [];
+    if (!logs.length) { tbody.innerHTML = '<tr><td colspan="10" class="empty">No logs yet. Run a test above.</td></tr>'; return; }
+    tbody.innerHTML = logs.map(l => `
+      <tr class="${l.success ? 'ok-row' : 'fail-row'}">
+        <td>${l.id}</td>
+        <td style="white-space:nowrap;">${(l.start_time||l.created_at||'').replace('T',' ').slice(0,19)}</td>
+        <td>${l.agent_id||'—'}</td>
+        <td class="truncate">${l.model_used||'—'}</td>
+        <td>${l.prompt_tokens||0}</td>
+        <td>${l.completion_tokens||0}</td>
+        <td><b>${l.total_tokens||0}</b></td>
+        <td>$${(l.cost_usd||0).toFixed(6)}</td>
+        <td>${(l.latency_ms||0).toFixed(0)}ms</td>
+        <td><span class="badge badge-${l.success?'ok':'fail'}">${l.success?'OK':'FAIL'}</span>${l.error?`<div style="font-size:10px;color:var(--red);margin-top:2px;">${l.error.slice(0,60)}</div>`:''}</td>
+      </tr>`).join('');
+  } catch(e) { tbody.innerHTML = '<tr><td colspan="10" class="empty">Could not load logs.</td></tr>'; }
+}
+
+// ── STANDALONE TEST (TAB 3) ─────────────────────────────────
+function goTest(name) {
+  document.querySelectorAll('#mainTabBar .tab-btn').forEach((b,i) => b.classList.toggle('active', i===2));
+  document.querySelectorAll('.page-wrap > .tab-pane').forEach((p,i) => p.classList.toggle('active', i===2));
+  loadTestCfgs().then(() => { const s = document.getElementById('testCfg'); if(s) s.value = name; });
+}
+
+// ── CREATE MODAL ──────────────────────────────────────────────
+function openCreateModal() {
+  modalMode = 'create'; editingName = null;
+  document.getElementById('cfgModalTitle').textContent = 'Create LLM Configuration';
+  document.getElementById('nameFields').style.display = 'grid';
+  document.getElementById('mUsecaseName').value = '';
+  document.getElementById('mConfigName').value = '';
+  document.getElementById('mTpm').value = 100000;
+  document.getElementById('mRpm').value = 60;
+  document.getElementById('mTpr').value = 4096;
+  document.getElementById('mPii').checked = false;
+  document.getElementById('mProfanity').checked = false;
+  document.getElementById('cfgModalErr').style.display = 'none';
+  mRows = []; addModalPrRow();
+  document.getElementById('cfgModal').classList.add('open');
+  document.getElementById('mUsecaseName').addEventListener('input', updateNamePreview);
+  document.getElementById('mConfigName').addEventListener('input', updateNamePreview);
+}
+
+function updateNamePreview() {
+  const u = document.getElementById('mUsecaseName').value || 'usecase';
+  const c = document.getElementById('mConfigName').value || 'config';
+  document.getElementById('namePreview').textContent = `${u}_${c}`;
+}
+
+async function openEdit(fullName) {
+  modalMode = 'edit'; editingName = fullName;
+  const r = await fetch(`/configs/${fullName}`); const cfg = await r.json();
+  document.getElementById('cfgModalTitle').textContent = `Edit: ${fullName}`;
+  document.getElementById('nameFields').style.display = 'none';
+  document.getElementById('mTpm').value = cfg.restrictions?.tpm ?? 100000;
+  document.getElementById('mRpm').value = cfg.restrictions?.rpm ?? 60;
+  document.getElementById('mTpr').value = cfg.restrictions?.tpr ?? 4096;
+  document.getElementById('mPii').checked = cfg.guardrails?.pii_masking ?? false;
+  document.getElementById('mProfanity').checked = cfg.guardrails?.profanity_filter ?? false;
+  document.getElementById('cfgModalErr').style.display = 'none';
+  mRows = [];
+  (cfg.operations?.chat || []).sort((a,b) => a.priority-b.priority).forEach(m => {
+    mRows.push({ id: mRowId++, litellm_model: m.litellm_model });
+  });
+  if (!mRows.length) addModalPrRow(); else renderModalPrRows();
+  document.getElementById('cfgModal').classList.add('open');
+}
+
+function closeCfgModal() { document.getElementById('cfgModal').classList.remove('open'); }
+
+function addModalPrRow() {
+  mRows.push({ id: mRowId++, litellm_model: '' });
+  renderModalPrRows();
+}
+
+function removeModalPrRow(id) {
+  mRows = mRows.filter(r => r.id !== id);
+  renderModalPrRows();
+}
+
+function renderModalPrRows() {
+  const box = document.getElementById('mPriorityChain');
+  const opts = pool.map(m => `<option value="${m.litellm_model}">${m.litellm_model} (${m.provider})</option>`).join('');
+  if (!opts) {
+    box.innerHTML = '<div style="font-size:12px;color:var(--muted);padding:10px 0;">No models in pool. Go to Model Pool tab and add models first.</div>';
+    document.getElementById('mAddPrBtn').disabled = true;
+    return;
+  }
+  document.getElementById('mAddPrBtn').disabled = false;
+  box.innerHTML = mRows.map((row, i) => `
+    <div class="priority-row">
+      <div class="pr-num">${i+1}</div>
+      <select onchange="mRows.find(r=>r.id===${row.id}).litellm_model=this.value">
+        <option value="">— select model —</option>
+        ${opts.replace(`value="${row.litellm_model}"`, `value="${row.litellm_model}" selected`)}
+      </select>
+      <span class="pr-remove" onclick="removeModalPrRow(${row.id})">×</span>
+    </div>`).join('');
+}
+
+async function saveConfig() {
+  const err = document.getElementById('cfgModalErr');
+  err.style.display = 'none';
+  const btn = document.getElementById('cfgSaveBtn');
+
+  const valid = mRows.filter(r => r.litellm_model);
+  if (!valid.length) { err.textContent = 'Add at least one model to the priority chain.'; err.style.display = 'block'; return; }
+
+  const chat = valid.map((r, i) => ({ litellm_model: r.litellm_model, priority: i+1 }));
+  const restrictions = {
+    tpm: parseInt(document.getElementById('mTpm').value) || 100000,
+    rpm: parseInt(document.getElementById('mRpm').value) || 60,
+    tpr: parseInt(document.getElementById('mTpr').value) || 4096,
+  };
+  const guardrails = {
+    pii_masking: document.getElementById('mPii').checked,
+    profanity_filter: document.getElementById('mProfanity').checked,
+  };
+
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Saving…';
+  try {
+    let res;
+    if (modalMode === 'create') {
+      const u = document.getElementById('mUsecaseName').value.trim();
+      const c = document.getElementById('mConfigName').value.trim();
+      if (!u || !c) { err.textContent = 'Use Case Name and Config Name are required.'; err.style.display = 'block'; return; }
+      res = await fetch('/configs', { method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ usecase_name:u, config_name:c, operations:{chat}, restrictions, guardrails }) });
+    } else {
+      res = await fetch(`/configs/${editingName}`, { method:'PUT', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ operations:{chat}, restrictions, guardrails }) });
+    }
+    const data = await res.json();
+    if (!res.ok) {
+      err.textContent = Array.isArray(data.detail) ? data.detail.join('\n') : (data.detail || 'Error');
+      err.style.display = 'block'; return;
+    }
+    closeCfgModal();
+    loadConfigs();
+    if (activeDetailConfig) openDetailPanel(activeDetailConfig);
+  } catch(e) { err.textContent = 'Could not reach server.'; err.style.display = 'block'; }
+  finally { btn.disabled = false; btn.textContent = 'Save Configuration'; }
+}
+
+// ══════════════════════════════════════════════════════════════
+// TAB 2 — MODEL POOL
+// ══════════════════════════════════════════════════════════════
+async function loadPool() {
+  const r = await fetch('/catalog/global_models'); pool = await r.json();
+  document.getElementById('poolBadge').textContent = pool.length;
+  const el = document.getElementById('poolList');
+  if (!pool.length) { el.innerHTML = '<div class="empty" style="padding:16px 0;">No models added yet</div>'; return; }
+  el.innerHTML = pool.map(m => `
+    <div class="pool-item">
+      <div style="flex:1;min-width:0;">
+        <div class="pool-item-name">${m.litellm_model}</div>
+        <div class="pool-item-meta">${m.provider}${m.has_api_key ? ' · 🔑 key set' : ''}</div>
+      </div>
+      <span class="pool-remove" onclick="removePool('${m.litellm_model.replace(/'/g,"\\''")}')">×</span>
+    </div>`).join('');
+}
+
+async function loadProviders() {
+  const r = await fetch('/catalog/providers'); const d = await r.json();
+  const box = document.getElementById('providerPills');
+  const priority = ['groq','gemini','anthropic','openai','mistral','deepseek'];
+  const sorted = [...d.providers].sort((a,b) => {
+    const ai=priority.indexOf(a), bi=priority.indexOf(b);
+    if(ai<0&&bi<0) return a.localeCompare(b);
+    return (ai<0?99:ai)-(bi<0?99:bi);
+  });
+  box.innerHTML = `<button class="ppill active" data-p="" onclick="pickProvider('',this)">All</button>` +
+    sorted.slice(0,14).map(p => `<button class="ppill" data-p="${p}" onclick="pickProvider('${p}',this)">${p}</button>`).join('');
+}
+
+function pickProvider(p, btn) {
+  catProvider = p;
+  document.querySelectorAll('.ppill').forEach(b => b.classList.toggle('active', b===btn));
+  loadCat();
+}
+
+function debSearch() { clearTimeout(catTimer); catTimer = setTimeout(loadCat, 350); }
+
+async function loadCat() {
+  const q = document.getElementById('catQ').value.trim();
+  const params = new URLSearchParams({ limit: '200' });
+  if (q) params.set('q', q);
+  if (catProvider) params.set('provider', catProvider);
+  const r = await fetch('/catalog/models?' + params); const d = await r.json();
+  catModels = d.models || [];
+  const poolKeys = new Set(pool.map(m => m.litellm_model));
+  const el = document.getElementById('catList');
+  if (!catModels.length) { el.innerHTML = '<div class="empty">No models match</div>'; return; }
+  el.innerHTML = catModels.map(m => {
+    const inPool = poolKeys.has(m.model_key);
+    return `<div class="cat-item${inPool?' in-pool':''}">
+      <div style="min-width:0;flex:1;">
+        <div class="cat-model-name">${m.model_key}</div>
+        <div class="cat-model-meta">
+          <span class="meta-pill">${m.provider}</span>
+          ${m.max_tokens ? `<span class="meta-pill">${m.max_tokens.toLocaleString()} ctx</span>` : ''}
+          ${m.supports_vision ? `<span class="meta-pill">vision</span>` : ''}
+          <span class="meta-pill">${m.cost_display}</span>
+        </div>
+      </div>
+      <button class="btn-outline btn-sm${inPool?' btn-primary':''}" style="flex-shrink:0;margin-left:10px;"
+        onclick="openAddModal('${m.model_key.replace(/'/g,"\\'")}','${m.provider}')">
+        ${inPool ? '✓ In Pool' : '+ Add'}
+      </button>
+    </div>`;
+  }).join('');
+}
+
+function openAddModal(key, provider) {
+  pendingModel = { litellm_model: key, provider };
+  document.getElementById('addModelSub').textContent = `Model: ${key}`;
+  document.getElementById('addModelKey').value = '';
+  document.getElementById('addModelBase').value = '';
+  document.getElementById('addModelErr').style.display = 'none';
+  document.getElementById('addModelModal').classList.add('open');
+}
+function closeAddModal() { document.getElementById('addModelModal').classList.remove('open'); pendingModel = null; }
+
+async function saveModelKey() {
+  const key = document.getElementById('addModelKey').value.trim();
+  const base = document.getElementById('addModelBase').value.trim();
+  const err = document.getElementById('addModelErr');
+  if (!key && !base) { err.textContent = 'Enter an API key.'; err.style.display = 'block'; return; }
+  const r = await fetch('/catalog/global_models', { method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ litellm_model: pendingModel.litellm_model, provider: pendingModel.provider, api_key: key||null, api_base: base||null }) });
+  const d = await r.json();
+  if (!r.ok) { err.textContent = d.detail || 'Error'; err.style.display = 'block'; return; }
+  closeAddModal(); await loadPool(); loadCat();
+}
+
+async function removePool(model) {
+  await fetch('/catalog/global_models/' + encodeURIComponent(model), { method:'DELETE' });
+  await loadPool(); loadCat();
+}
+
+// ══════════════════════════════════════════════════════════════
+// TAB 3 — STANDALONE TEST BOARD
+// ══════════════════════════════════════════════════════════════
+async function loadTestCfgs() {
+  const r = await fetch('/configs/active'); const active = await r.json();
+  const s = document.getElementById('testCfg');
+  s.innerHTML = '<option value="">Select configuration…</option>' +
+    active.map(c => `<option value="${c.full_name}">${c.full_name}</option>`).join('');
+}
+
+async function runTest() {
+  const cfg = document.getElementById('testCfg').value;
+  const prompt = document.getElementById('testPrompt').value.trim();
+  const maxTok = parseInt(document.getElementById('testMaxTok').value) || 120;
+  const err = document.getElementById('testErr');
+  err.style.display = 'none';
+  if (!cfg) { err.textContent = 'Select a configuration.'; err.style.display = 'block'; return; }
+  if (!prompt) { err.textContent = 'Enter a prompt.'; err.style.display = 'block'; return; }
+
+  const btn = document.getElementById('testRunBtn');
+  btn.innerHTML = '<span class="spinner"></span>Testing…'; btn.disabled = true;
+  document.getElementById('testResultBox').style.display = 'none';
+
+  try {
+    const r = await fetch(`/test/${cfg}`, { method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ prompt, max_tokens: maxTok }) });
+    const d = await r.json();
+    if (!r.ok) { err.textContent = d.detail || 'Test failed'; err.style.display = 'block'; return; }
+
+    document.getElementById('testResultBox').style.display = 'block';
+    document.getElementById('testOutput').textContent = d.response || '(empty response)';
+    document.getElementById('testMeta').innerHTML = [
+      ['Model Used',   d.model_used || '—'],
+      ['Config',       d.config],
+      ['Prompt Tokens', d.prompt_tokens],
+      ['Completion',   d.completion_tokens],
+      ['Total Tokens', d.total_tokens],
+      ['Latency',      (d.latency_ms||0).toFixed(0)+'ms'],
+      ['Start Time',   (d.start_time||'').replace('T',' ').slice(0,19)],
+      ['End Time',     (d.end_time||'').replace('T',' ').slice(0,19)],
+      ['Est. Cost',    '$'+(d.estimated_cost_usd||0).toFixed(6)],
+    ].map(([k,v]) => `<div class="test-meta-item"><div class="test-meta-key">${k}</div><div class="test-meta-val">${v}</div></div>`).join('');
+
+    recentTests.unshift(d); renderRecentTests();
+  } catch(e) { err.textContent = 'Could not reach server.'; err.style.display = 'block'; }
+  finally { btn.innerHTML = '▶ Run Test'; btn.disabled = false; }
+}
+
+function renderRecentTests() {
+  const el = document.getElementById('recentTests');
+  if (!recentTests.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">🧪</div>No tests run yet</div>'; return; }
+  el.innerHTML = `<table class="logs-table"><thead><tr><th>Time</th><th>Config</th><th>Model Used</th><th>Tokens</th><th>Latency</th><th>Response</th></tr></thead>
+    <tbody>${recentTests.slice(0,10).map(t => `<tr class="ok-row">
+      <td>${(t.start_time||'').slice(11,19)}</td>
+      <td>${t.config}</td>
+      <td class="truncate">${t.model_used||'—'}</td>
+      <td>${t.total_tokens}</td>
+      <td>${(t.latency_ms||0).toFixed(0)}ms</td>
+      <td style="font-family:sans-serif;font-size:12px;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${t.response||'—'}</td>
+    </tr>`).join('')}</tbody></table>`;
+}
+
+// ══════════════════════════════════════════════════════════════
+// TAB 4 — STANDALONE REQUEST LOGS
+// ══════════════════════════════════════════════════════════════
+async function loadLogs() {
+  const filter = document.getElementById('logFilter').value;
+  const url = filter ? `/logs/${filter}?limit=100` : '/logs?limit=100';
+  const tbody = document.getElementById('logsBody');
+  try {
+    const r = await fetch(url); const d = await r.json();
+    const logs = d.logs || [];
+    if (!logs.length) { tbody.innerHTML = '<tr><td colspan="12" class="empty">No logs yet. Run an analysis or use the Test Board.</td></tr>'; return; }
+    tbody.innerHTML = logs.map(l => `
+      <tr class="${l.success ? 'ok-row' : 'fail-row'}">
+        <td>${l.id}</td>
+        <td style="white-space:nowrap;">${(l.start_time||l.created_at||'').replace('T',' ').slice(0,19)}</td>
+        <td>${l.config_full_name||'—'}</td>
+        <td>${l.agent_id||'—'}</td>
+        <td class="truncate">${l.model_used||'—'}</td>
+        <td>${l.api_key_hint ? l.api_key_hint.slice(0,8)+'…' : '—'}</td>
+        <td>${l.prompt_tokens||0}</td>
+        <td>${l.completion_tokens||0}</td>
+        <td><b>${l.total_tokens||0}</b></td>
+        <td>$${(l.cost_usd||0).toFixed(6)}</td>
+        <td>${(l.latency_ms||0).toFixed(0)}ms</td>
+        <td><span class="badge badge-${l.success?'ok':'fail'}">${l.success?'OK':'FAIL'}</span>${l.error?`<div style="font-size:10px;color:var(--red);margin-top:2px;">${l.error.slice(0,60)}</div>`:''}</td>
+      </tr>`).join('');
+    // populate filter dropdown
+    const sel = document.getElementById('logFilter');
+    const cur = sel.value;
+    const names = [...new Set(logs.map(l => l.config_full_name).filter(Boolean))];
+    sel.innerHTML = '<option value="">All configurations</option>' + names.map(n => `<option value="${n}"${n===cur?' selected':''}>${n}</option>`).join('');
+  } catch(e) { tbody.innerHTML = '<tr><td colspan="12" class="empty">Could not load logs.</td></tr>'; }
+}
+
+// ── INIT ──────────────────────────────────────────────────────
+window.addEventListener('load', () => { loadConfigs(); loadPool(); });
+</script>
+</body>
+</html>
