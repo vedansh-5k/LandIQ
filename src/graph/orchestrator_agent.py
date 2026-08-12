@@ -58,8 +58,8 @@ def _tc_call(fn_name, *args):
 
 DEFAULT_PLAN = {
     "layers": [
-        ["location", "legal", "financial", "market"],
-        ["bull", "bear"],
+        ["location", "legal", "financial", "market", "environmental_risk"],
+        ["bull", "bear", "area_crowd"],
         ["due_diligence"],
         ["senior_consultant"],
     ]
