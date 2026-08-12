@@ -1,0 +1,202 @@
+C:\Users\HP\OneDrive\Desktop\ai_boardroom_v3\venv\Lib\site-packages\langchain_core\tools\base.py:38: UserWarning: Core Pydantic V1 functionality isn't compatible with Python 3.14 or greater.
+  from pydantic.v1 import BaseModel as BaseModelV1
+INFO:     Started server process [7172]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+[legal] primary LLM failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01k
+[legal] parse failed: 'list' object has no attribute 'strip'
+[Langflow] routes registered at /langflow/* and /internal/*
+[dynamic_agent] token accounting v2 loaded
+  [RETRY 1/3] legal -> 429, waiting 4s...
+  [RETRY 2/3] legal -> 429, waiting 8s...
+  [FALLBACK] legal -> Gemini flash (primary unavailable)
+[tracked_chain] loaded
+  [TOKENS] Legal Risk Agent             IN=1297   OUT=796   TOTAL=2093   (gemini)
+INFO:     127.0.0.1:60548 - "POST /internal/run-single-agent HTTP/1.1" 200 OK
+[area_crowd] primary LLM failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01k
+[area_crowd] parse failed: 'list' object has no attribute 'strip'
+  [RETRY 1/3] area_crowd -> 429, waiting 4s...
+  [RETRY 2/3] area_crowd -> 429, waiting 8s...
+  [FALLBACK] area_crowd -> Gemini flash (primary unavailable)
+  [TOKENS] Area Crowd Analysis          IN=578    OUT=795   TOTAL=1373   (gemini)
+INFO:     127.0.0.1:60549 - "POST /internal/run-single-agent HTTP/1.1" 200 OK
+[environmental_risk] primary LLM failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01k
+[environmental_risk] parse failed: 'list' object has no attribute 'strip'
+  [RETRY 1/3] environmental_risk -> 429, waiting 4s...
+  [RETRY 2/3] environmental_risk -> 429, waiting 8s...
+  [FALLBACK] environmental_risk -> Gemini flash (primary unavailable)
+  [TOKENS] Environmental Risk Agent     IN=530    OUT=796   TOTAL=1326   (gemini)
+INFO:     127.0.0.1:60550 - "POST /internal/run-single-agent HTTP/1.1" 200 OK
+[senior_consultant] primary LLM failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01k
+[senior_consultant] parse failed: 'list' object has no attribute 'strip'
+  [RETRY 1/3] senior_consultant -> 429, waiting 4s...
+  [RETRY 2/3] senior_consultant -> 429, waiting 8s...
+  [FALLBACK] senior_consultant -> Gemini flash (primary unavailable)
+  [TOKENS] Senior Investment Consultant IN=1304   OUT=796   TOTAL=2100   (gemini)
+INFO:     127.0.0.1:60551 - "POST /internal/run-single-agent HTTP/1.1" 200 OK
+[market] primary LLM failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01k
+[market] parse failed: 'list' object has no attribute 'strip'
+  [RETRY 1/3] market -> 429, waiting 4s...
+  [RETRY 2/3] market -> 429, waiting 8s...
+  [FALLBACK] market -> Gemini flash (primary unavailable)
+  [TOKENS] Market Intelligence Agent    IN=1217   OUT=796   TOTAL=2013   (gemini)
+INFO:     127.0.0.1:60552 - "POST /internal/run-single-agent HTTP/1.1" 200 OK
+[bull] primary LLM failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01k
+[bull] parse failed: 'list' object has no attribute 'strip'
+  [RETRY 1/3] bull -> 429, waiting 4s...
+  [RETRY 2/3] bull -> 429, waiting 8s...
+  [FALLBACK] bull -> Gemini flash (primary unavailable)
+  [TOKENS] Bull Case Agent              IN=1170   OUT=796   TOTAL=1966   (gemini)
+INFO:     127.0.0.1:60553 - "POST /internal/run-single-agent HTTP/1.1" 200 OK
+[financial] primary LLM failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01k
+[financial] parse failed: 'list' object has no attribute 'strip'
+  [RETRY 1/3] financial -> 429, waiting 4s...
+  [RETRY 2/3] financial -> 429, waiting 8s...
+  [FALLBACK] financial -> Gemini flash (primary unavailable)
+  [TOKENS] Financial Analysis Agent     IN=1386   OUT=796   TOTAL=2182   (gemini)
+INFO:     127.0.0.1:60554 - "POST /internal/run-single-agent HTTP/1.1" 200 OK
+[location] primary LLM failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01k
+[location] parse failed: 'list' object has no attribute 'strip'
+  [RETRY 1/3] location -> 429, waiting 4s...
+  [RETRY 2/3] location -> 429, waiting 8s...
+  [FALLBACK] location -> Gemini flash (primary unavailable)
+  [TOKENS] Location Intelligence Agent  IN=1335   OUT=796   TOTAL=2131   (gemini)
+INFO:     127.0.0.1:60555 - "POST /internal/run-single-agent HTTP/1.1" 200 OK
+[due_diligence] primary LLM failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01k
+[due_diligence] parse failed: 'list' object has no attribute 'strip'
+  [RETRY 1/3] due_diligence -> 429, waiting 4s...
+  [RETRY 2/3] due_diligence -> 429, waiting 8s...
+  [FALLBACK] due_diligence -> Gemini flash (primary unavailable)
+  [TOKENS] Due Diligence Agent          IN=1119   OUT=796   TOTAL=1915   (gemini)
+INFO:     127.0.0.1:60556 - "POST /internal/run-single-agent HTTP/1.1" 200 OK
+[bear] primary LLM failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01k
+[bear] parse failed: 'list' object has no attribute 'strip'
+  [RETRY 1/3] bear -> 429, waiting 4s...
+  [RETRY 2/3] bear -> 429, waiting 8s...
+  [FALLBACK] bear -> Gemini flash (primary unavailable)
+  [TOKENS] Bear Case Agent              IN=1218   OUT=795   TOTAL=2013   (gemini)
+INFO:     127.0.0.1:60557 - "POST /internal/run-single-agent HTTP/1.1" 200 OK
+C:\Users\HP\OneDrive\Desktop\ai_boardroom_v3\src\rag\vectorstore.py:43: LangChainDeprecationWarning: The class `HuggingFaceEmbeddings` was deprecated in LangChain 0.2.2 and will be removed in 1.0. An updated version of the class exists in the `langchain-huggingface package and should be used instead. To use it run `pip install -U `langchain-huggingface` and import as `from `langchain_huggingface import HuggingFaceEmbeddings``.
+  return SentenceTransformerEmbeddings(
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+
+  [ORCHESTRATOR] Agents available: ['area_crowd', 'bear', 'bull', 'due_diligence', 'environmental_risk', 'financial', 'legal', 'location', 'market', 'senior_consultant']
+  [ORCHESTRATOR] User selected: ['all']
+  [ORCHESTRATOR] Planner LLM: ChatGroq (local)
+  [ORCHESTRATOR] LLM PLAN: [['environmental_risk', 'financial', 'legal', 'location', 'market'], ['area_crowd', 'bear', 'bull'], ['due_diligence'], ['senior_consultant']]
+Loading embedding model: all-MiniLM-L6-v2
+Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|##########| 103/103 [00:00<00:00, 5676.10it/s]
+C:\Users\HP\OneDrive\Desktop\ai_boardroom_v3\src\rag\vectorstore.py:91: LangChainDeprecationWarning: The class `Chroma` was deprecated in LangChain 0.2.9 and will be removed in 1.0. An updated version of the class exists in the `langchain-chroma package and should be used instead. To use it run `pip install -U `langchain-chroma` and import as `from `langchain_chroma import Chroma``.
+  vectorstore = Chroma(
+Loaded existing vectorstore from ./chroma_db
+RAG retrieval error: 'charmap' codec can't encode character '\u2192' in position 25: character maps to <undefined>
+INFO:     127.0.0.1:52381 - "POST /internal/run-orchestrated HTTP/1.1" 200 OK
+INFO:     127.0.0.1:60774 - "GET /health HTTP/1.1" 200 OK
+  [RETRY 1/3] area_crowd -> 429, waiting 4s...
+  [RETRY 2/3] area_crowd -> 429, waiting 8s...
+  [TOKENS] Area Crowd Analysis          IN=581    OUT=154   TOTAL=735    (groq)
+INFO:     127.0.0.1:64976 - "POST /internal/run-single-agent HTTP/1.1" 200 OK
+[senior_consultant] primary LLM failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01k
+[senior_consultant] parse failed: 'list' object has no attribute 'strip'
+  [RETRY 1/3] senior_consultant -> 429, waiting 4s...
+  [RETRY 2/3] senior_consultant -> 429, waiting 8s...
+  [FALLBACK] senior_consultant -> Gemini flash (primary unavailable)
+  [TOKENS] Senior Investment Consultant IN=1304   OUT=796   TOTAL=2100   (gemini)
+INFO:     127.0.0.1:64977 - "POST /internal/run-single-agent HTTP/1.1" 200 OK
+[legal] primary LLM failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01k
+[legal] parse failed: 'list' object has no attribute 'strip'
+  [RETRY 1/3] legal -> 429, waiting 4s...
+  [RETRY 2/3] legal -> 429, waiting 8s...
+  [FALLBACK] legal -> Gemini flash (primary unavailable)
+  [TOKENS] Legal Risk Agent             IN=1297   OUT=796   TOTAL=2093   (gemini)
+INFO:     127.0.0.1:64978 - "POST /internal/run-single-agent HTTP/1.1" 200 OK
+[market] primary LLM failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01k
+[market] parse failed: 'list' object has no attribute 'strip'
+  [RETRY 1/3] market -> 429, waiting 4s...
+  [RETRY 2/3] market -> 429, waiting 8s...
+  [FALLBACK] market -> Gemini flash (primary unavailable)
+  [TOKENS] Market Intelligence Agent    IN=1217   OUT=796   TOTAL=2013   (gemini)
+INFO:     127.0.0.1:64979 - "POST /internal/run-single-agent HTTP/1.1" 200 OK
+[due_diligence] primary LLM failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01k
+[due_diligence] parse failed: 'list' object has no attribute 'strip'
+  [RETRY 1/3] due_diligence -> 429, waiting 4s...
+  [RETRY 2/3] due_diligence -> 429, waiting 8s...
+  [FALLBACK] due_diligence -> Gemini flash (primary unavailable)
+  [TOKENS] Due Diligence Agent          IN=1119   OUT=796   TOTAL=1915   (gemini)
+INFO:     127.0.0.1:64980 - "POST /internal/run-single-agent HTTP/1.1" 200 OK
+[bull] primary LLM failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01k
+[bull] parse failed: 'list' object has no attribute 'strip'
+  [RETRY 1/3] bull -> 429, waiting 4s...
+  [RETRY 2/3] bull -> 429, waiting 8s...
+  [FALLBACK] bull -> Gemini flash (primary unavailable)
+  [TOKENS] Bull Case Agent              IN=1170   OUT=795   TOTAL=1965   (gemini)
+INFO:     127.0.0.1:64981 - "POST /internal/run-single-agent HTTP/1.1" 200 OK
+[financial] primary LLM failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01k
+[financial] parse failed: 'list' object has no attribute 'strip'
+  [RETRY 1/3] financial -> 429, waiting 4s...
+  [RETRY 2/3] financial -> 429, waiting 8s...
+  [FALLBACK] financial -> Gemini flash (primary unavailable)
+  [TOKENS] Financial Analysis Agent     IN=1386   OUT=796   TOTAL=2182   (gemini)
+INFO:     127.0.0.1:64982 - "POST /internal/run-single-agent HTTP/1.1" 200 OK
+[bear] primary LLM failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01k
+[bear] parse failed: 'list' object has no attribute 'strip'
+  [RETRY 1/3] bear -> 429, waiting 4s...
+  [RETRY 2/3] bear -> 429, waiting 8s...
+  [FALLBACK] bear -> Gemini flash (primary unavailable)
+  [TOKENS] Bear Case Agent              IN=1218   OUT=796   TOTAL=2014   (gemini)
+INFO:     127.0.0.1:64983 - "POST /internal/run-single-agent HTTP/1.1" 200 OK
+Exception in callback _ProactorBasePipeTransport._call_connection_lost()
+handle: <Handle _ProactorBasePipeTransport._call_connection_lost()>
+Traceback (most recent call last):
+  File "C:\Program Files\Python314\Lib\asyncio\events.py", line 94, in _run
+    self._context.run(self._callback, *self._args)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python314\Lib\asyncio\proactor_events.py", line 165, in _call_connection_lost
+    self._sock.shutdown(socket.SHUT_RDWR)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+[environmental_risk] primary LLM failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01k
+[environmental_risk] parse failed: 'list' object has no attribute 'strip'
+  [RETRY 1/3] environmental_risk -> 429, waiting 4s...
+  [RETRY 2/3] environmental_risk -> 429, waiting 8s...
+  [FALLBACK] environmental_risk -> Gemini flash (primary unavailable)
+  [TOKENS] Environmental Risk Agent     IN=530    OUT=796   TOTAL=1326   (gemini)
+INFO:     127.0.0.1:64984 - "POST /internal/run-single-agent HTTP/1.1" 200 OK
+Exception in callback _ProactorBasePipeTransport._call_connection_lost()
+handle: <Handle _ProactorBasePipeTransport._call_connection_lost()>
+Traceback (most recent call last):
+  File "C:\Program Files\Python314\Lib\asyncio\events.py", line 94, in _run
+    self._context.run(self._callback, *self._args)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python314\Lib\asyncio\proactor_events.py", line 165, in _call_connection_lost
+    self._sock.shutdown(socket.SHUT_RDWR)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+Exception in callback _ProactorBasePipeTransport._call_connection_lost()
+handle: <Handle _ProactorBasePipeTransport._call_connection_lost()>
+Traceback (most recent call last):
+  File "C:\Program Files\Python314\Lib\asyncio\events.py", line 94, in _run
+    self._context.run(self._callback, *self._args)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Program Files\Python314\Lib\asyncio\proactor_events.py", line 165, in _call_connection_lost
+    self._sock.shutdown(socket.SHUT_RDWR)
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+ConnectionResetError: [WinError 10054] An existing connection was forcibly closed by the remote host
+[location] primary LLM failed: Error code: 429 - {'error': {'message': 'Rate limit reached for model `llama-3.3-70b-versatile` in organization `org_01k
+[location] parse failed: 'list' object has no attribute 'strip'
+  [RETRY 1/3] location -> 429, waiting 4s...
+  [RETRY 2/3] location -> 429, waiting 8s...
+  [FALLBACK] location -> Gemini flash (primary unavailable)
+  [TOKENS] Location Intelligence Agent  IN=1335   OUT=796   TOTAL=2131   (gemini)
+INFO:     127.0.0.1:64985 - "POST /internal/run-single-agent HTTP/1.1" 200 OK
+
+  [ORCHESTRATOR] Agents available: ['area_crowd', 'bear', 'bull', 'due_diligence', 'environmental_risk', 'financial', 'legal', 'location', 'market', 'senior_consultant']
+  [ORCHESTRATOR] User selected: ['all']
+  [ORCHESTRATOR] Planner LLM: ChatGroq (local)
+  [ORCHESTRATOR] LLM PLAN: [['environmental_risk', 'financial', 'legal', 'location', 'market'], ['area_crowd', 'bear', 'bull'], ['due_diligence'], ['senior_consultant']]
+Loading embedding model: all-MiniLM-L6-v2
+Loading weights:   0%|          | 0/103 [00:00<?, ?it/s]Loading weights: 100%|##########| 103/103 [00:00<00:00, 7469.24it/s]
+Loaded existing vectorstore from ./chroma_db
+RAG retrieval error: 'charmap' codec can't encode character '\u2192' in position 25: character maps to <undefined>
+INFO:     127.0.0.1:59925 - "POST /internal/run-orchestrated HTTP/1.1" 200 OK

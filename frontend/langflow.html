@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>LandIQ — Langflow Orchestration Layer</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#FAF7F0; --panel:#FFFFFF; --ink:#241F1A; --muted:#8A7F72;
+  --line:#E6DFD3; --line2:#F0EAE0;
+  --live:#2F7A4F; --live-bg:#EAF4EE;
+  --down:#A8452F; --down-bg:#FAEDE9;
+  --wait:#8A6D1F; --wait-bg:#FBF3DE;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:Inter,sans-serif;font-size:14px;line-height:1.55;padding:32px 20px 80px}
+.wrap{max-width:1080px;margin:0 auto}
+
+header{display:flex;justify-content:space-between;align-items:flex-end;gap:20px;flex-wrap:wrap;
+  border-bottom:1px solid var(--line);padding-bottom:20px;margin-bottom:28px}
+h1{font-family:'Cormorant Garamond',serif;font-size:38px;font-weight:600;letter-spacing:-.01em;line-height:1.1}
+.sub{color:var(--muted);font-size:13px;margin-top:6px;max-width:46ch}
+a.back{font-size:12px;color:var(--muted);text-decoration:none;border-bottom:1px solid var(--line)}
+a.back:hover{color:var(--ink)}
+
+.grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px}
+.card h2{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:14px}
+
+.pill{display:inline-flex;align-items:center;gap:7px;padding:5px 11px;border-radius:999px;
+  font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase}
+.pill.on{background:var(--live-bg);color:var(--live)}
+.pill.off{background:var(--down-bg);color:var(--down)}
+.pill.wait{background:var(--wait-bg);color:var(--wait)}
+.dot{width:7px;height:7px;border-radius:50%;background:currentColor}
+.pill.on .dot{animation:pulse 1.8s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+
+dl.kv{display:grid;grid-template-columns:auto 1fr;gap:7px 16px;margin-top:14px;font-size:12.5px}
+dl.kv dt{color:var(--muted)}
+dl.kv dd{font-family:'JetBrains Mono',monospace;font-size:11.5px;word-break:break-all;text-align:right}
+
+.note{margin-top:14px;padding:11px 13px;border-radius:8px;font-size:12.5px;background:var(--line2);color:var(--muted)}
+.note.bad{background:var(--down-bg);color:var(--down)}
+.note.good{background:var(--live-bg);color:var(--live)}
+
+label{display:block;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+input,textarea{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;
+  background:var(--bg);font-family:'JetBrains Mono',monospace;font-size:12.5px;color:var(--ink)}
+textarea{font-family:Inter,sans-serif;font-size:13px;resize:vertical;min-height:74px}
+input:focus,textarea:focus{outline:2px solid #C9BBA6;outline-offset:1px;border-color:transparent}
+
+button{font-family:Inter,sans-serif;font-size:12.5px;font-weight:600;padding:10px 18px;border-radius:8px;
+  border:1px solid var(--ink);background:var(--ink);color:var(--bg);cursor:pointer;transition:opacity .15s}
+button:hover{opacity:.85}
+button:disabled{opacity:.4;cursor:not-allowed}
+button.ghost{background:transparent;color:var(--ink);border-color:var(--line)}
+.row{display:flex;gap:9px;margin-top:12px;flex-wrap:wrap}
+
+.flow{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:6px}
+.node{border:1px solid var(--line);border-radius:9px;padding:11px 14px;background:var(--bg);min-width:130px}
+.node b{display:block;font-size:12.5px}
+.node span{font-size:10.5px;color:var(--muted);font-family:'JetBrains Mono',monospace}
+.arrow{color:var(--muted);font-size:15px}
+
+.layer{display:flex;gap:10px;align-items:flex-start;padding:11px 0;border-bottom:1px solid var(--line2)}
+.layer:last-child{border-bottom:0}
+.lnum{font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--muted);padding-top:4px;min-width:56px}
+.agents{display:flex;gap:6px;flex-wrap:wrap}
+.agent{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:4px 9px;font-size:12px}
+.agent.par{border-color:#C9BBA6}
+
+.tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+.tag{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:3px 8px;
+  font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--muted)}
+
+.full{grid-column:1/-1}
+.spin{display:inline-block;width:11px;height:11px;border:2px solid var(--line);border-top-color:var(--ink);
+  border-radius:50%;animation:sp .7s linear infinite;vertical-align:-1px;margin-right:7px}
+@keyframes sp{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div>
+    <h1>Langflow orchestration layer</h1>
+    <p class="sub">Langflow builds the agent execution plan visually. If it is unavailable, LandIQ falls back to its local orchestrator without interruption.</p>
+  </div>
+  <a class="back" href="/">&larr; Back to LandIQ</a>
+</header>
+
+<div class="grid">
+
+  <!-- connection -->
+  <section class="card">
+    <h2>Connection</h2>
+    <div id="pill" class="pill wait"><span class="dot"></span>Checking</div>
+    <dl class="kv">
+      <dt>Server</dt><dd id="kBase">—</dd>
+      <dt>Version</dt><dd id="kVer">—</dd>
+      <dt>Latency</dt><dd id="kLat">—</dd>
+      <dt>Flow</dt><dd id="kFlow">—</dd>
+      <dt>Flow ID</dt><dd id="kFid">—</dd>
+      <dt>Resolved via</dt><dd id="kSrc">—</dd>
+    </dl>
+    <div id="msg" class="note">Loading…</div>
+    <div class="row">
+      <button class="ghost" onclick="refresh()">Refresh</button>
+      <button class="ghost" id="btnOpen" disabled onclick="openFlow()">Open in Langflow</button>
+    </div>
+  </section>
+
+  <!-- server url -->
+  <section class="card">
+    <h2>Langflow address</h2>
+    <label for="url">Base URL</label>
+    <input id="url" placeholder="http://127.0.0.1:7860"/>
+    <label for="key" style="margin-top:12px">API key <span style="text-transform:none;letter-spacing:0;font-weight:400">— only if your Langflow requires one</span></label>
+    <input id="key" placeholder="leave empty for local Langflow"/>
+    <div class="row">
+      <button onclick="saveUrl()">Save and reconnect</button>
+    </div>
+    <div class="note">Saved to <code>configs/langflow_active.json</code>. Nothing is hardcoded — change the port or move Langflow to another machine and LandIQ follows.</div>
+  </section>
+
+  <!-- flow graph -->
+  <section class="card full">
+    <h2>Flow inside Langflow</h2>
+    <div id="graph" class="flow"><span style="color:var(--muted);font-size:12.5px">Loading…</span></div>
+    <div style="margin-top:16px">
+      <label>Agents currently registered in LandIQ</label>
+      <div id="agents" class="tags"></div>
+    </div>
+  </section>
+
+  <!-- live plan -->
+  <section class="card full">
+    <h2>Run the planner</h2>
+    <label for="q">Land investment query</label>
+    <textarea id="q">Should I buy 250 sq yards of residential land in Gurugram Sector 79 for a 5 year hold?</textarea>
+    <div class="row">
+      <button id="btnRun" onclick="runPlan()">Plan with Langflow</button>
+      <span id="took" style="align-self:center;font-size:11.5px;color:var(--muted);font-family:'JetBrains Mono',monospace"></span>
+    </div>
+    <div id="plan" style="margin-top:16px"></div>
+  </section>
+
+</div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+let S = null;
+
+function pill(state, text){
+  const p = $('pill');
+  p.className = 'pill ' + state;
+  p.innerHTML = '<span class="dot"></span>' + text;
+}
+
+async function refresh(){
+  pill('wait','Checking');
+  $('msg').className = 'note';
+  $('msg').textContent = 'Contacting LandIQ…';
+  try{
+    const r = await fetch('/langflow/status');
+    if(!r.ok) throw new Error('LandIQ returned HTTP ' + r.status + ' — restart python run.py after patching api.py');
+    S = await r.json();
+    render();
+  }catch(e){
+    pill('off','Unavailable');
+    $('msg').className = 'note bad';
+    $('msg').textContent = e.message;
+  }
+}
+
+function render(){
+  const lf = S.langflow || {}, fl = S.flow || {}, g = S.graph || {};
+  $('kBase').textContent = lf.base_url || '—';
+  $('kVer').textContent  = lf.version || '—';
+  $('kLat').textContent  = lf.latency_ms != null ? lf.latency_ms + ' ms' : '—';
+  $('kFlow').textContent = fl.flow_name || '—';
+  $('kFid').textContent  = fl.flow_id ? fl.flow_id.slice(0,18) + '…' : '—';
+  $('kSrc').textContent  = fl.source || '—';
+
+  if(!$('url').value) $('url').value = lf.base_url || '';
+
+  if(S.ready){ pill('on','Live'); $('msg').className='note good'; }
+  else if(lf.online){ pill('wait','No flow'); $('msg').className='note'; }
+  else { pill('off','Offline'); $('msg').className='note bad'; }
+  $('msg').textContent = S.message || '';
+  if(!lf.online){
+    $('msg').textContent += '  LandIQ is still fully operational on its local orchestrator.';
+  }
+
+  $('btnOpen').disabled = !S.ready;
+
+  const tags = $('agents');
+  tags.innerHTML = '';
+  (S.agents_detected || []).forEach(a => {
+    const el = document.createElement('span');
+    el.className = 'tag'; el.textContent = a; tags.appendChild(el);
+  });
+  if(!(S.agents_detected||[]).length) tags.innerHTML = '<span class="tag">registry empty</span>';
+
+  drawGraph(fl.ok ? fl.flow_id : null, g);
+}
+
+async function drawGraph(flowId, counts){
+  const box = $('graph');
+  if(!flowId){
+    box.innerHTML = '<span style="color:var(--muted);font-size:12.5px">No flow yet. Run <code>python setup_langflow.py</code> with Langflow running.</span>';
+    return;
+  }
+  box.innerHTML = '<span class="spin"></span><span style="color:var(--muted);font-size:12.5px">Reading flow…</span>';
+  try{
+    const r = await fetch('/langflow/flow-graph');
+    const g = await r.json();
+    if(!g.ok || !g.nodes.length){
+      box.innerHTML = '<span style="color:var(--muted);font-size:12.5px">' + (g.error || 'Flow has no nodes yet.') + '</span>';
+      return;
+    }
+    const order = orderNodes(g.nodes, g.edges);
+    box.innerHTML = order.map((n,i) =>
+      (i ? '<span class="arrow">&rarr;</span>' : '') +
+      '<div class="node"><b>' + esc(n.display_name || n.type) + '</b><span>' + esc(n.type || '') + '</span></div>'
+    ).join('');
+  }catch(e){
+    box.innerHTML = '<span style="color:var(--muted);font-size:12.5px">' + esc(e.message) + '</span>';
+  }
+}
+
+function orderNodes(nodes, edges){
+  const byId = {}; nodes.forEach(n => byId[n.id] = n);
+  const targets = new Set(edges.map(e => e.target));
+  const next = {}; edges.forEach(e => next[e.source] = e.target);
+  let head = nodes.find(n => !targets.has(n.id)) || nodes[0];
+  const out = [], seen = new Set();
+  let cur = head;
+  while(cur && !seen.has(cur.id)){ out.push(cur); seen.add(cur.id); cur = byId[next[cur.id]]; }
+  nodes.forEach(n => { if(!seen.has(n.id)) out.push(n); });
+  return out;
+}
+
+function openFlow(){
+  const url = (S && S.ui_url) || '';
+  if(url) window.open(url, '_blank');
+}
+
+async function saveUrl(){
+  const body = { base_url: $('url').value.trim(), api_key: $('key').value.trim() };
+  if(!body.base_url){ alert('Enter the Langflow base URL, for example http://127.0.0.1:7860'); return; }
+  pill('wait','Reconnecting');
+  try{
+    const r = await fetch('/langflow/set-url', {
+      method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)
+    });
+    S = await r.json();
+    S.agents_detected = S.agents_detected || (await (await fetch('/langflow/status')).json()).agents_detected;
+    render();
+  }catch(e){
+    pill('off','Unavailable');
+    $('msg').className='note bad'; $('msg').textContent = e.message;
+  }
+}
+
+async function runPlan(){
+  const btn = $('btnRun'), out = $('plan');
+  btn.disabled = true; $('took').textContent = '';
+  out.innerHTML = '<span class="spin"></span><span style="color:var(--muted);font-size:12.5px">Langflow is planning…</span>';
+  const t0 = performance.now();
+  try{
+    const r = await fetch('/langflow/plan', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ query: $('q').value })
+    });
+    const d = await r.json();
+    $('took').textContent = ((performance.now()-t0)/1000).toFixed(1) + 's';
+
+    if(!d.ok){
+      out.innerHTML = '<div class="note bad"><b>Langflow could not plan.</b><br>' + esc(d.error||'') +
+        '<br><br>LandIQ will use ' + esc(d.fallback||'its local planner') + ' — the analysis still runs normally.</div>' +
+        (d.raw_text ? '<div class="note" style="margin-top:8px">Model replied: ' + esc(d.raw_text) + '</div>' : '');
+      return;
+    }
+
+    const layers = d.plan.layers;
+    let html = '<div class="note good">Plan built by Langflow flow <code>' + esc((d.flow_id||'').slice(0,8)) +
+               '</code> in ' + d.duration_s + 's, using only agents that exist in your registry.</div>';
+    if(d.plan.reasoning) html += '<div class="note">' + esc(d.plan.reasoning) + '</div>';
+    html += '<div style="margin-top:12px">';
+    layers.forEach((l,i) => {
+      html += '<div class="layer"><div class="lnum">LAYER ' + (i+1) + '</div><div class="agents">' +
+        l.map(a => '<span class="agent' + (l.length>1?' par':'') + '">' + esc(a) + '</span>').join('') +
+        '</div></div>';
+    });
+    html += '</div><div class="note" style="margin-top:10px">Agents in the same layer run in parallel. Layers run in order.</div>';
+    out.innerHTML = html;
+  }catch(e){
+    out.innerHTML = '<div class="note bad">' + esc(e.message) + '</div>';
+  }finally{
+    btn.disabled = false;
+  }
+}
+
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+refresh();
+setInterval(() => { if(document.visibilityState === 'visible') refresh(); }, 20000);
+</script>
+</body>
+</html>

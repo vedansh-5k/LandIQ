@@ -1,0 +1,1090 @@
+{
+  "data": {
+    "nodes": [
+      {
+        "id": "0921b841-3919-43a1-b2c2-4a0f9facd65c",
+        "type": "genericNode",
+        "position": {
+          "x": 100,
+          "y": 200
+        },
+        "data": {
+          "id": "0921b841-3919-43a1-b2c2-4a0f9facd65c",
+          "type": "CustomComponent",
+          "node": {
+            "display_name": "\ud83c\udfaf LandIQ Orchestrator",
+            "description": "Runs the full LandIQ agent pipeline via backend API (timeout: 600s)",
+            "base_classes": [
+              "Message"
+            ],
+            "template": {
+              "_type": "Component",
+              "code": {
+                "type": "code",
+                "required": true,
+                "placeholder": "",
+                "show": true,
+                "value": "\nfrom langflow.custom import Component\nfrom langflow.io import MessageTextInput, Output\nfrom langflow.schema.message import Message\nimport requests, json\n\nclass LandIQOrchestrator(Component):\n    display_name = \"LandIQ Orchestrator\"\n    description = \"Calls the LandIQ backend to run the full agent pipeline\"\n\n    inputs = [\n        MessageTextInput(name=\"budget\", display_name=\"Budget (INR)\", value=\"50 Lakhs\"),\n        MessageTextInput(name=\"city\", display_name=\"City\", value=\"gurugram\"),\n        MessageTextInput(name=\"land_type\", display_name=\"Land Type\", value=\"residential\"),\n        MessageTextInput(name=\"location\", display_name=\"Location / Area\", value=\"sector 44\"),\n        MessageTextInput(name=\"purpose\", display_name=\"Purpose\", value=\"investment\"),\n        MessageTextInput(name=\"state\", display_name=\"State\", value=\"haryana\"),\n    ]\n\n    outputs = [\n        Output(display_name=\"Full Result\", name=\"full_result\", method=\"run_pipeline\"),\n    ]\n\n    def run_pipeline(self) -> Message:\n        payload = {\n            \"budget\": self.budget,\n            \"city\": self.city,\n            \"land_type\": self.land_type,\n            \"location\": self.location,\n            \"purpose\": self.purpose,\n            \"state\": self.state,\n            \"selected_agents\": [\"all\"],\n        }\n        try:\n            resp = requests.post(\n                \"http://localhost:8000/analyse\",\n                json=payload,\n                timeout=600,\n            )\n            data = resp.json()\n            return Message(text=json.dumps(data, indent=2))\n        except Exception as e:\n            return Message(text=json.dumps({\"error\": str(e)}))\n",
+                "name": "code",
+                "advanced": true
+              }
+            },
+            "output_types": [
+              "Message"
+            ],
+            "inputs": [],
+            "outputs": [
+              {
+                "name": "output",
+                "display_name": "Output",
+                "method": "build_output"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "68fcb0b3-5c0f-4dd8-b740-584306170837",
+        "type": "genericNode",
+        "position": {
+          "x": 700,
+          "y": 0
+        },
+        "data": {
+          "id": "68fcb0b3-5c0f-4dd8-b740-584306170837",
+          "type": "CustomComponent",
+          "node": {
+            "display_name": "\ud83c\udf3f Environmental Risk",
+            "description": "\ud83c\udf3f Environmental Risk agent \u2014 extracts its output from orchestrator result",
+            "base_classes": [
+              "Message"
+            ],
+            "template": {
+              "_type": "Component",
+              "code": {
+                "type": "code",
+                "required": true,
+                "placeholder": "",
+                "show": true,
+                "value": "\nfrom langflow.custom import Component\nfrom langflow.io import MessageTextInput, Output\nfrom langflow.schema.message import Message\nimport json\n\nclass EnvironmentalRiskAgent(Component):\n    display_name = \"\ud83c\udf3f Environmental Risk\"\n    description = \"Extracts \ud83c\udf3f Environmental Risk output from the orchestrator result\"\n\n    inputs = [\n        MessageTextInput(name=\"input\", display_name=\"Pipeline Result\", is_list=False),\n    ]\n\n    outputs = [\n        Output(display_name=\"Agent Output\", name=\"output\", method=\"build_output\"),\n    ]\n\n    def build_output(self) -> Message:\n        try:\n            data = json.loads(self.input)\n            # Try multiple key patterns the backend might use\n            result = (\n                data.get(\"environmental_risk_output\")\n                or data.get(\"environmental_risk\")\n                or data.get(\"\ud83c\udf3f Environmental Risk\")\n                or data.get(\"agents\", {}).get(\"environmental_risk\")\n                or data.get(\"agents\", {}).get(\"\ud83c\udf3f Environmental Risk\")\n                or \"\ud83c\udf3f Environmental Risk: awaiting data\"\n            )\n            if isinstance(result, dict):\n                result = json.dumps(result, indent=2)\n            return Message(text=str(result))\n        except Exception as e:\n            return Message(text=f\"\ud83c\udf3f Environmental Risk: {e}\")\n",
+                "name": "code",
+                "advanced": true
+              }
+            },
+            "output_types": [
+              "Message"
+            ],
+            "inputs": [],
+            "outputs": [
+              {
+                "name": "output",
+                "display_name": "Output",
+                "method": "build_output"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "750e5e93-5d89-420a-b99b-ccaccaef5f59",
+        "type": "genericNode",
+        "position": {
+          "x": 700,
+          "y": 160
+        },
+        "data": {
+          "id": "750e5e93-5d89-420a-b99b-ccaccaef5f59",
+          "type": "CustomComponent",
+          "node": {
+            "display_name": "\ud83d\udcb0 Financial Analysis",
+            "description": "\ud83d\udcb0 Financial Analysis agent \u2014 extracts its output from orchestrator result",
+            "base_classes": [
+              "Message"
+            ],
+            "template": {
+              "_type": "Component",
+              "code": {
+                "type": "code",
+                "required": true,
+                "placeholder": "",
+                "show": true,
+                "value": "\nfrom langflow.custom import Component\nfrom langflow.io import MessageTextInput, Output\nfrom langflow.schema.message import Message\nimport json\n\nclass FinancialAgent(Component):\n    display_name = \"\ud83d\udcb0 Financial Analysis\"\n    description = \"Extracts \ud83d\udcb0 Financial Analysis output from the orchestrator result\"\n\n    inputs = [\n        MessageTextInput(name=\"input\", display_name=\"Pipeline Result\", is_list=False),\n    ]\n\n    outputs = [\n        Output(display_name=\"Agent Output\", name=\"output\", method=\"build_output\"),\n    ]\n\n    def build_output(self) -> Message:\n        try:\n            data = json.loads(self.input)\n            # Try multiple key patterns the backend might use\n            result = (\n                data.get(\"financial_output\")\n                or data.get(\"financial\")\n                or data.get(\"\ud83d\udcb0 Financial Analysis\")\n                or data.get(\"agents\", {}).get(\"financial\")\n                or data.get(\"agents\", {}).get(\"\ud83d\udcb0 Financial Analysis\")\n                or \"\ud83d\udcb0 Financial Analysis: awaiting data\"\n            )\n            if isinstance(result, dict):\n                result = json.dumps(result, indent=2)\n            return Message(text=str(result))\n        except Exception as e:\n            return Message(text=f\"\ud83d\udcb0 Financial Analysis: {e}\")\n",
+                "name": "code",
+                "advanced": true
+              }
+            },
+            "output_types": [
+              "Message"
+            ],
+            "inputs": [],
+            "outputs": [
+              {
+                "name": "output",
+                "display_name": "Output",
+                "method": "build_output"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "6290af2b-d572-4329-b303-7915916e7e05",
+        "type": "genericNode",
+        "position": {
+          "x": 700,
+          "y": 320
+        },
+        "data": {
+          "id": "6290af2b-d572-4329-b303-7915916e7e05",
+          "type": "CustomComponent",
+          "node": {
+            "display_name": "\u2696\ufe0f Legal Risk",
+            "description": "\u2696\ufe0f Legal Risk agent \u2014 extracts its output from orchestrator result",
+            "base_classes": [
+              "Message"
+            ],
+            "template": {
+              "_type": "Component",
+              "code": {
+                "type": "code",
+                "required": true,
+                "placeholder": "",
+                "show": true,
+                "value": "\nfrom langflow.custom import Component\nfrom langflow.io import MessageTextInput, Output\nfrom langflow.schema.message import Message\nimport json\n\nclass LegalAgent(Component):\n    display_name = \"\u2696\ufe0f Legal Risk\"\n    description = \"Extracts \u2696\ufe0f Legal Risk output from the orchestrator result\"\n\n    inputs = [\n        MessageTextInput(name=\"input\", display_name=\"Pipeline Result\", is_list=False),\n    ]\n\n    outputs = [\n        Output(display_name=\"Agent Output\", name=\"output\", method=\"build_output\"),\n    ]\n\n    def build_output(self) -> Message:\n        try:\n            data = json.loads(self.input)\n            # Try multiple key patterns the backend might use\n            result = (\n                data.get(\"legal_output\")\n                or data.get(\"legal\")\n                or data.get(\"\u2696\ufe0f Legal Risk\")\n                or data.get(\"agents\", {}).get(\"legal\")\n                or data.get(\"agents\", {}).get(\"\u2696\ufe0f Legal Risk\")\n                or \"\u2696\ufe0f Legal Risk: awaiting data\"\n            )\n            if isinstance(result, dict):\n                result = json.dumps(result, indent=2)\n            return Message(text=str(result))\n        except Exception as e:\n            return Message(text=f\"\u2696\ufe0f Legal Risk: {e}\")\n",
+                "name": "code",
+                "advanced": true
+              }
+            },
+            "output_types": [
+              "Message"
+            ],
+            "inputs": [],
+            "outputs": [
+              {
+                "name": "output",
+                "display_name": "Output",
+                "method": "build_output"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "b0c01bef-88bd-4309-9a07-af870a9c89c4",
+        "type": "genericNode",
+        "position": {
+          "x": 700,
+          "y": 480
+        },
+        "data": {
+          "id": "b0c01bef-88bd-4309-9a07-af870a9c89c4",
+          "type": "CustomComponent",
+          "node": {
+            "display_name": "\ud83d\udccd Location Intelligence",
+            "description": "\ud83d\udccd Location Intelligence agent \u2014 extracts its output from orchestrator result",
+            "base_classes": [
+              "Message"
+            ],
+            "template": {
+              "_type": "Component",
+              "code": {
+                "type": "code",
+                "required": true,
+                "placeholder": "",
+                "show": true,
+                "value": "\nfrom langflow.custom import Component\nfrom langflow.io import MessageTextInput, Output\nfrom langflow.schema.message import Message\nimport json\n\nclass LocationAgent(Component):\n    display_name = \"\ud83d\udccd Location Intelligence\"\n    description = \"Extracts \ud83d\udccd Location Intelligence output from the orchestrator result\"\n\n    inputs = [\n        MessageTextInput(name=\"input\", display_name=\"Pipeline Result\", is_list=False),\n    ]\n\n    outputs = [\n        Output(display_name=\"Agent Output\", name=\"output\", method=\"build_output\"),\n    ]\n\n    def build_output(self) -> Message:\n        try:\n            data = json.loads(self.input)\n            # Try multiple key patterns the backend might use\n            result = (\n                data.get(\"location_output\")\n                or data.get(\"location\")\n                or data.get(\"\ud83d\udccd Location Intelligence\")\n                or data.get(\"agents\", {}).get(\"location\")\n                or data.get(\"agents\", {}).get(\"\ud83d\udccd Location Intelligence\")\n                or \"\ud83d\udccd Location Intelligence: awaiting data\"\n            )\n            if isinstance(result, dict):\n                result = json.dumps(result, indent=2)\n            return Message(text=str(result))\n        except Exception as e:\n            return Message(text=f\"\ud83d\udccd Location Intelligence: {e}\")\n",
+                "name": "code",
+                "advanced": true
+              }
+            },
+            "output_types": [
+              "Message"
+            ],
+            "inputs": [],
+            "outputs": [
+              {
+                "name": "output",
+                "display_name": "Output",
+                "method": "build_output"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "a844a2f9-7a79-4dfb-a850-d1cdab7172a6",
+        "type": "genericNode",
+        "position": {
+          "x": 700,
+          "y": 640
+        },
+        "data": {
+          "id": "a844a2f9-7a79-4dfb-a850-d1cdab7172a6",
+          "type": "CustomComponent",
+          "node": {
+            "display_name": "\ud83d\udcca Market Intelligence",
+            "description": "\ud83d\udcca Market Intelligence agent \u2014 extracts its output from orchestrator result",
+            "base_classes": [
+              "Message"
+            ],
+            "template": {
+              "_type": "Component",
+              "code": {
+                "type": "code",
+                "required": true,
+                "placeholder": "",
+                "show": true,
+                "value": "\nfrom langflow.custom import Component\nfrom langflow.io import MessageTextInput, Output\nfrom langflow.schema.message import Message\nimport json\n\nclass MarketAgent(Component):\n    display_name = \"\ud83d\udcca Market Intelligence\"\n    description = \"Extracts \ud83d\udcca Market Intelligence output from the orchestrator result\"\n\n    inputs = [\n        MessageTextInput(name=\"input\", display_name=\"Pipeline Result\", is_list=False),\n    ]\n\n    outputs = [\n        Output(display_name=\"Agent Output\", name=\"output\", method=\"build_output\"),\n    ]\n\n    def build_output(self) -> Message:\n        try:\n            data = json.loads(self.input)\n            # Try multiple key patterns the backend might use\n            result = (\n                data.get(\"market_output\")\n                or data.get(\"market\")\n                or data.get(\"\ud83d\udcca Market Intelligence\")\n                or data.get(\"agents\", {}).get(\"market\")\n                or data.get(\"agents\", {}).get(\"\ud83d\udcca Market Intelligence\")\n                or \"\ud83d\udcca Market Intelligence: awaiting data\"\n            )\n            if isinstance(result, dict):\n                result = json.dumps(result, indent=2)\n            return Message(text=str(result))\n        except Exception as e:\n            return Message(text=f\"\ud83d\udcca Market Intelligence: {e}\")\n",
+                "name": "code",
+                "advanced": true
+              }
+            },
+            "output_types": [
+              "Message"
+            ],
+            "inputs": [],
+            "outputs": [
+              {
+                "name": "output",
+                "display_name": "Output",
+                "method": "build_output"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "7ebb3475-e903-4623-8370-c2175d921838",
+        "type": "genericNode",
+        "position": {
+          "x": 1300,
+          "y": 80
+        },
+        "data": {
+          "id": "7ebb3475-e903-4623-8370-c2175d921838",
+          "type": "CustomComponent",
+          "node": {
+            "display_name": "\ud83d\udc65 Area Crowd Analysis",
+            "description": "\ud83d\udc65 Area Crowd Analysis agent \u2014 extracts its output from orchestrator result",
+            "base_classes": [
+              "Message"
+            ],
+            "template": {
+              "_type": "Component",
+              "code": {
+                "type": "code",
+                "required": true,
+                "placeholder": "",
+                "show": true,
+                "value": "\nfrom langflow.custom import Component\nfrom langflow.io import MessageTextInput, Output\nfrom langflow.schema.message import Message\nimport json\n\nclass AreaCrowdAgent(Component):\n    display_name = \"\ud83d\udc65 Area Crowd Analysis\"\n    description = \"Extracts \ud83d\udc65 Area Crowd Analysis output from the orchestrator result\"\n\n    inputs = [\n        MessageTextInput(name=\"input\", display_name=\"Pipeline Result\", is_list=False),\n    ]\n\n    outputs = [\n        Output(display_name=\"Agent Output\", name=\"output\", method=\"build_output\"),\n    ]\n\n    def build_output(self) -> Message:\n        try:\n            data = json.loads(self.input)\n            # Try multiple key patterns the backend might use\n            result = (\n                data.get(\"area_crowd_output\")\n                or data.get(\"area_crowd\")\n                or data.get(\"\ud83d\udc65 Area Crowd Analysis\")\n                or data.get(\"agents\", {}).get(\"area_crowd\")\n                or data.get(\"agents\", {}).get(\"\ud83d\udc65 Area Crowd Analysis\")\n                or \"\ud83d\udc65 Area Crowd Analysis: awaiting data\"\n            )\n            if isinstance(result, dict):\n                result = json.dumps(result, indent=2)\n            return Message(text=str(result))\n        except Exception as e:\n            return Message(text=f\"\ud83d\udc65 Area Crowd Analysis: {e}\")\n",
+                "name": "code",
+                "advanced": true
+              }
+            },
+            "output_types": [
+              "Message"
+            ],
+            "inputs": [],
+            "outputs": [
+              {
+                "name": "output",
+                "display_name": "Output",
+                "method": "build_output"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "b57ef981-674c-4c24-a398-e1a0f70a9023",
+        "type": "genericNode",
+        "position": {
+          "x": 1300,
+          "y": 240
+        },
+        "data": {
+          "id": "b57ef981-674c-4c24-a398-e1a0f70a9023",
+          "type": "CustomComponent",
+          "node": {
+            "display_name": "\ud83d\udc3b Bear Case",
+            "description": "\ud83d\udc3b Bear Case agent \u2014 extracts its output from orchestrator result",
+            "base_classes": [
+              "Message"
+            ],
+            "template": {
+              "_type": "Component",
+              "code": {
+                "type": "code",
+                "required": true,
+                "placeholder": "",
+                "show": true,
+                "value": "\nfrom langflow.custom import Component\nfrom langflow.io import MessageTextInput, Output\nfrom langflow.schema.message import Message\nimport json\n\nclass BearAgent(Component):\n    display_name = \"\ud83d\udc3b Bear Case\"\n    description = \"Extracts \ud83d\udc3b Bear Case output from the orchestrator result\"\n\n    inputs = [\n        MessageTextInput(name=\"input\", display_name=\"Pipeline Result\", is_list=False),\n    ]\n\n    outputs = [\n        Output(display_name=\"Agent Output\", name=\"output\", method=\"build_output\"),\n    ]\n\n    def build_output(self) -> Message:\n        try:\n            data = json.loads(self.input)\n            # Try multiple key patterns the backend might use\n            result = (\n                data.get(\"bear_output\")\n                or data.get(\"bear\")\n                or data.get(\"\ud83d\udc3b Bear Case\")\n                or data.get(\"agents\", {}).get(\"bear\")\n                or data.get(\"agents\", {}).get(\"\ud83d\udc3b Bear Case\")\n                or \"\ud83d\udc3b Bear Case: awaiting data\"\n            )\n            if isinstance(result, dict):\n                result = json.dumps(result, indent=2)\n            return Message(text=str(result))\n        except Exception as e:\n            return Message(text=f\"\ud83d\udc3b Bear Case: {e}\")\n",
+                "name": "code",
+                "advanced": true
+              }
+            },
+            "output_types": [
+              "Message"
+            ],
+            "inputs": [],
+            "outputs": [
+              {
+                "name": "output",
+                "display_name": "Output",
+                "method": "build_output"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "25e647c0-1e6c-43ea-b25b-c155ed7b79ea",
+        "type": "genericNode",
+        "position": {
+          "x": 1300,
+          "y": 400
+        },
+        "data": {
+          "id": "25e647c0-1e6c-43ea-b25b-c155ed7b79ea",
+          "type": "CustomComponent",
+          "node": {
+            "display_name": "\ud83d\udc02 Bull Case",
+            "description": "\ud83d\udc02 Bull Case agent \u2014 extracts its output from orchestrator result",
+            "base_classes": [
+              "Message"
+            ],
+            "template": {
+              "_type": "Component",
+              "code": {
+                "type": "code",
+                "required": true,
+                "placeholder": "",
+                "show": true,
+                "value": "\nfrom langflow.custom import Component\nfrom langflow.io import MessageTextInput, Output\nfrom langflow.schema.message import Message\nimport json\n\nclass BullAgent(Component):\n    display_name = \"\ud83d\udc02 Bull Case\"\n    description = \"Extracts \ud83d\udc02 Bull Case output from the orchestrator result\"\n\n    inputs = [\n        MessageTextInput(name=\"input\", display_name=\"Pipeline Result\", is_list=False),\n    ]\n\n    outputs = [\n        Output(display_name=\"Agent Output\", name=\"output\", method=\"build_output\"),\n    ]\n\n    def build_output(self) -> Message:\n        try:\n            data = json.loads(self.input)\n            # Try multiple key patterns the backend might use\n            result = (\n                data.get(\"bull_output\")\n                or data.get(\"bull\")\n                or data.get(\"\ud83d\udc02 Bull Case\")\n                or data.get(\"agents\", {}).get(\"bull\")\n                or data.get(\"agents\", {}).get(\"\ud83d\udc02 Bull Case\")\n                or \"\ud83d\udc02 Bull Case: awaiting data\"\n            )\n            if isinstance(result, dict):\n                result = json.dumps(result, indent=2)\n            return Message(text=str(result))\n        except Exception as e:\n            return Message(text=f\"\ud83d\udc02 Bull Case: {e}\")\n",
+                "name": "code",
+                "advanced": true
+              }
+            },
+            "output_types": [
+              "Message"
+            ],
+            "inputs": [],
+            "outputs": [
+              {
+                "name": "output",
+                "display_name": "Output",
+                "method": "build_output"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "729d08ef-b52e-4e2f-9507-f624e05085c9",
+        "type": "genericNode",
+        "position": {
+          "x": 1900,
+          "y": 200
+        },
+        "data": {
+          "id": "729d08ef-b52e-4e2f-9507-f624e05085c9",
+          "type": "CustomComponent",
+          "node": {
+            "display_name": "\ud83d\udd0d Due Diligence",
+            "description": "\ud83d\udd0d Due Diligence agent \u2014 extracts its output from orchestrator result",
+            "base_classes": [
+              "Message"
+            ],
+            "template": {
+              "_type": "Component",
+              "code": {
+                "type": "code",
+                "required": true,
+                "placeholder": "",
+                "show": true,
+                "value": "\nfrom langflow.custom import Component\nfrom langflow.io import MessageTextInput, Output\nfrom langflow.schema.message import Message\nimport json\n\nclass DueDiligenceAgent(Component):\n    display_name = \"\ud83d\udd0d Due Diligence\"\n    description = \"Extracts \ud83d\udd0d Due Diligence output from the orchestrator result\"\n\n    inputs = [\n        MessageTextInput(name=\"input\", display_name=\"Pipeline Result\", is_list=False),\n    ]\n\n    outputs = [\n        Output(display_name=\"Agent Output\", name=\"output\", method=\"build_output\"),\n    ]\n\n    def build_output(self) -> Message:\n        try:\n            data = json.loads(self.input)\n            # Try multiple key patterns the backend might use\n            result = (\n                data.get(\"due_diligence_output\")\n                or data.get(\"due_diligence\")\n                or data.get(\"\ud83d\udd0d Due Diligence\")\n                or data.get(\"agents\", {}).get(\"due_diligence\")\n                or data.get(\"agents\", {}).get(\"\ud83d\udd0d Due Diligence\")\n                or \"\ud83d\udd0d Due Diligence: awaiting data\"\n            )\n            if isinstance(result, dict):\n                result = json.dumps(result, indent=2)\n            return Message(text=str(result))\n        except Exception as e:\n            return Message(text=f\"\ud83d\udd0d Due Diligence: {e}\")\n",
+                "name": "code",
+                "advanced": true
+              }
+            },
+            "output_types": [
+              "Message"
+            ],
+            "inputs": [],
+            "outputs": [
+              {
+                "name": "output",
+                "display_name": "Output",
+                "method": "build_output"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "e28308bb-639c-458b-853d-293197553fe4",
+        "type": "genericNode",
+        "position": {
+          "x": 2500,
+          "y": 200
+        },
+        "data": {
+          "id": "e28308bb-639c-458b-853d-293197553fe4",
+          "type": "CustomComponent",
+          "node": {
+            "display_name": "\ud83c\udfdb\ufe0f Senior Consultant",
+            "description": "\ud83c\udfdb\ufe0f Senior Consultant agent \u2014 extracts its output from orchestrator result",
+            "base_classes": [
+              "Message"
+            ],
+            "template": {
+              "_type": "Component",
+              "code": {
+                "type": "code",
+                "required": true,
+                "placeholder": "",
+                "show": true,
+                "value": "\nfrom langflow.custom import Component\nfrom langflow.io import MessageTextInput, Output\nfrom langflow.schema.message import Message\nimport json\n\nclass SeniorConsultantAgent(Component):\n    display_name = \"\ud83c\udfdb\ufe0f Senior Consultant\"\n    description = \"Extracts \ud83c\udfdb\ufe0f Senior Consultant output from the orchestrator result\"\n\n    inputs = [\n        MessageTextInput(name=\"input\", display_name=\"Pipeline Result\", is_list=False),\n    ]\n\n    outputs = [\n        Output(display_name=\"Agent Output\", name=\"output\", method=\"build_output\"),\n    ]\n\n    def build_output(self) -> Message:\n        try:\n            data = json.loads(self.input)\n            # Try multiple key patterns the backend might use\n            result = (\n                data.get(\"senior_consultant_output\")\n                or data.get(\"senior_consultant\")\n                or data.get(\"\ud83c\udfdb\ufe0f Senior Consultant\")\n                or data.get(\"agents\", {}).get(\"senior_consultant\")\n                or data.get(\"agents\", {}).get(\"\ud83c\udfdb\ufe0f Senior Consultant\")\n                or \"\ud83c\udfdb\ufe0f Senior Consultant: awaiting data\"\n            )\n            if isinstance(result, dict):\n                result = json.dumps(result, indent=2)\n            return Message(text=str(result))\n        except Exception as e:\n            return Message(text=f\"\ud83c\udfdb\ufe0f Senior Consultant: {e}\")\n",
+                "name": "code",
+                "advanced": true
+              }
+            },
+            "output_types": [
+              "Message"
+            ],
+            "inputs": [],
+            "outputs": [
+              {
+                "name": "output",
+                "display_name": "Output",
+                "method": "build_output"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "8522be76-1a67-4a63-b5f6-091cb9e3d692",
+        "type": "genericNode",
+        "position": {
+          "x": 3100,
+          "y": 200
+        },
+        "data": {
+          "id": "8522be76-1a67-4a63-b5f6-091cb9e3d692",
+          "type": "CustomComponent",
+          "node": {
+            "display_name": "\ud83d\udccb Analysis Report",
+            "description": "Final investment analysis report with verdict",
+            "base_classes": [
+              "Message"
+            ],
+            "template": {
+              "_type": "Component",
+              "code": {
+                "type": "code",
+                "required": true,
+                "placeholder": "",
+                "show": true,
+                "value": "\nfrom langflow.custom import Component\nfrom langflow.io import MessageTextInput, Output\nfrom langflow.schema.message import Message\nimport json\n\nclass AnalysisReport(Component):\n    display_name = \"Analysis Report\"\n    description = \"Aggregates the Senior Consultant verdict into a final report\"\n\n    inputs = [\n        MessageTextInput(name=\"input\", display_name=\"Senior Verdict\", is_list=False),\n    ]\n\n    outputs = [\n        Output(display_name=\"Final Report\", name=\"output\", method=\"build_output\"),\n    ]\n\n    def build_output(self) -> Message:\n        return Message(text=self.input if self.input else \"No report generated\")\n",
+                "name": "code",
+                "advanced": true
+              }
+            },
+            "output_types": [
+              "Message"
+            ],
+            "inputs": [],
+            "outputs": [
+              {
+                "name": "output",
+                "display_name": "Output",
+                "method": "build_output"
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "edges": [
+      {
+        "id": "f6d94cae-b718-4c00-8347-4b1821b0dcc7",
+        "source": "0921b841-3919-43a1-b2c2-4a0f9facd65c",
+        "target": "68fcb0b3-5c0f-4dd8-b740-584306170837",
+        "sourceHandle": "0921b841-3919-43a1-b2c2-4a0f9facd65c|full_result",
+        "targetHandle": "68fcb0b3-5c0f-4dd8-b740-584306170837|input",
+        "data": {
+          "sourceHandle": {
+            "id": "0921b841-3919-43a1-b2c2-4a0f9facd65c",
+            "name": "full_result",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "id": "68fcb0b3-5c0f-4dd8-b740-584306170837",
+            "name": "input",
+            "input_types": [
+              "Message"
+            ]
+          }
+        }
+      },
+      {
+        "id": "ccb915a9-4fd4-4a50-9ecc-018095539331",
+        "source": "0921b841-3919-43a1-b2c2-4a0f9facd65c",
+        "target": "750e5e93-5d89-420a-b99b-ccaccaef5f59",
+        "sourceHandle": "0921b841-3919-43a1-b2c2-4a0f9facd65c|full_result",
+        "targetHandle": "750e5e93-5d89-420a-b99b-ccaccaef5f59|input",
+        "data": {
+          "sourceHandle": {
+            "id": "0921b841-3919-43a1-b2c2-4a0f9facd65c",
+            "name": "full_result",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "id": "750e5e93-5d89-420a-b99b-ccaccaef5f59",
+            "name": "input",
+            "input_types": [
+              "Message"
+            ]
+          }
+        }
+      },
+      {
+        "id": "0881b3bc-8e23-43e8-82c0-d496029bf3b7",
+        "source": "0921b841-3919-43a1-b2c2-4a0f9facd65c",
+        "target": "6290af2b-d572-4329-b303-7915916e7e05",
+        "sourceHandle": "0921b841-3919-43a1-b2c2-4a0f9facd65c|full_result",
+        "targetHandle": "6290af2b-d572-4329-b303-7915916e7e05|input",
+        "data": {
+          "sourceHandle": {
+            "id": "0921b841-3919-43a1-b2c2-4a0f9facd65c",
+            "name": "full_result",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "id": "6290af2b-d572-4329-b303-7915916e7e05",
+            "name": "input",
+            "input_types": [
+              "Message"
+            ]
+          }
+        }
+      },
+      {
+        "id": "5dfff091-d7ff-4395-ab07-06c25435b7e7",
+        "source": "0921b841-3919-43a1-b2c2-4a0f9facd65c",
+        "target": "b0c01bef-88bd-4309-9a07-af870a9c89c4",
+        "sourceHandle": "0921b841-3919-43a1-b2c2-4a0f9facd65c|full_result",
+        "targetHandle": "b0c01bef-88bd-4309-9a07-af870a9c89c4|input",
+        "data": {
+          "sourceHandle": {
+            "id": "0921b841-3919-43a1-b2c2-4a0f9facd65c",
+            "name": "full_result",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "id": "b0c01bef-88bd-4309-9a07-af870a9c89c4",
+            "name": "input",
+            "input_types": [
+              "Message"
+            ]
+          }
+        }
+      },
+      {
+        "id": "af1ac719-1ce4-4c73-ac4a-bb0bf61d0b1e",
+        "source": "0921b841-3919-43a1-b2c2-4a0f9facd65c",
+        "target": "a844a2f9-7a79-4dfb-a850-d1cdab7172a6",
+        "sourceHandle": "0921b841-3919-43a1-b2c2-4a0f9facd65c|full_result",
+        "targetHandle": "a844a2f9-7a79-4dfb-a850-d1cdab7172a6|input",
+        "data": {
+          "sourceHandle": {
+            "id": "0921b841-3919-43a1-b2c2-4a0f9facd65c",
+            "name": "full_result",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "id": "a844a2f9-7a79-4dfb-a850-d1cdab7172a6",
+            "name": "input",
+            "input_types": [
+              "Message"
+            ]
+          }
+        }
+      },
+      {
+        "id": "58ea70ce-8909-45c7-abb8-28d35a5394f7",
+        "source": "68fcb0b3-5c0f-4dd8-b740-584306170837",
+        "target": "7ebb3475-e903-4623-8370-c2175d921838",
+        "sourceHandle": "68fcb0b3-5c0f-4dd8-b740-584306170837|output",
+        "targetHandle": "7ebb3475-e903-4623-8370-c2175d921838|input",
+        "data": {
+          "sourceHandle": {
+            "id": "68fcb0b3-5c0f-4dd8-b740-584306170837",
+            "name": "output",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "id": "7ebb3475-e903-4623-8370-c2175d921838",
+            "name": "input",
+            "input_types": [
+              "Message"
+            ]
+          }
+        }
+      },
+      {
+        "id": "28718ae5-eaa8-4cbc-8bc2-cf93af024f3c",
+        "source": "68fcb0b3-5c0f-4dd8-b740-584306170837",
+        "target": "b57ef981-674c-4c24-a398-e1a0f70a9023",
+        "sourceHandle": "68fcb0b3-5c0f-4dd8-b740-584306170837|output",
+        "targetHandle": "b57ef981-674c-4c24-a398-e1a0f70a9023|input",
+        "data": {
+          "sourceHandle": {
+            "id": "68fcb0b3-5c0f-4dd8-b740-584306170837",
+            "name": "output",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "id": "b57ef981-674c-4c24-a398-e1a0f70a9023",
+            "name": "input",
+            "input_types": [
+              "Message"
+            ]
+          }
+        }
+      },
+      {
+        "id": "f3cedee1-23e7-464e-a11b-fa9e80984eed",
+        "source": "68fcb0b3-5c0f-4dd8-b740-584306170837",
+        "target": "25e647c0-1e6c-43ea-b25b-c155ed7b79ea",
+        "sourceHandle": "68fcb0b3-5c0f-4dd8-b740-584306170837|output",
+        "targetHandle": "25e647c0-1e6c-43ea-b25b-c155ed7b79ea|input",
+        "data": {
+          "sourceHandle": {
+            "id": "68fcb0b3-5c0f-4dd8-b740-584306170837",
+            "name": "output",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "id": "25e647c0-1e6c-43ea-b25b-c155ed7b79ea",
+            "name": "input",
+            "input_types": [
+              "Message"
+            ]
+          }
+        }
+      },
+      {
+        "id": "9dfe1950-db90-4049-aa0c-6f0b07967e82",
+        "source": "750e5e93-5d89-420a-b99b-ccaccaef5f59",
+        "target": "7ebb3475-e903-4623-8370-c2175d921838",
+        "sourceHandle": "750e5e93-5d89-420a-b99b-ccaccaef5f59|output",
+        "targetHandle": "7ebb3475-e903-4623-8370-c2175d921838|input",
+        "data": {
+          "sourceHandle": {
+            "id": "750e5e93-5d89-420a-b99b-ccaccaef5f59",
+            "name": "output",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "id": "7ebb3475-e903-4623-8370-c2175d921838",
+            "name": "input",
+            "input_types": [
+              "Message"
+            ]
+          }
+        }
+      },
+      {
+        "id": "cfc2137f-b0a4-4287-82ea-7305dea66754",
+        "source": "750e5e93-5d89-420a-b99b-ccaccaef5f59",
+        "target": "b57ef981-674c-4c24-a398-e1a0f70a9023",
+        "sourceHandle": "750e5e93-5d89-420a-b99b-ccaccaef5f59|output",
+        "targetHandle": "b57ef981-674c-4c24-a398-e1a0f70a9023|input",
+        "data": {
+          "sourceHandle": {
+            "id": "750e5e93-5d89-420a-b99b-ccaccaef5f59",
+            "name": "output",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "id": "b57ef981-674c-4c24-a398-e1a0f70a9023",
+            "name": "input",
+            "input_types": [
+              "Message"
+            ]
+          }
+        }
+      },
+      {
+        "id": "ae78651d-a1d5-413b-bb9d-4473cfd7b785",
+        "source": "750e5e93-5d89-420a-b99b-ccaccaef5f59",
+        "target": "25e647c0-1e6c-43ea-b25b-c155ed7b79ea",
+        "sourceHandle": "750e5e93-5d89-420a-b99b-ccaccaef5f59|output",
+        "targetHandle": "25e647c0-1e6c-43ea-b25b-c155ed7b79ea|input",
+        "data": {
+          "sourceHandle": {
+            "id": "750e5e93-5d89-420a-b99b-ccaccaef5f59",
+            "name": "output",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "id": "25e647c0-1e6c-43ea-b25b-c155ed7b79ea",
+            "name": "input",
+            "input_types": [
+              "Message"
+            ]
+          }
+        }
+      },
+      {
+        "id": "a3416004-4799-439e-b73e-78714033a739",
+        "source": "6290af2b-d572-4329-b303-7915916e7e05",
+        "target": "7ebb3475-e903-4623-8370-c2175d921838",
+        "sourceHandle": "6290af2b-d572-4329-b303-7915916e7e05|output",
+        "targetHandle": "7ebb3475-e903-4623-8370-c2175d921838|input",
+        "data": {
+          "sourceHandle": {
+            "id": "6290af2b-d572-4329-b303-7915916e7e05",
+            "name": "output",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "id": "7ebb3475-e903-4623-8370-c2175d921838",
+            "name": "input",
+            "input_types": [
+              "Message"
+            ]
+          }
+        }
+      },
+      {
+        "id": "88e1ac69-6386-4d15-9f69-518f8f5d0f9f",
+        "source": "6290af2b-d572-4329-b303-7915916e7e05",
+        "target": "b57ef981-674c-4c24-a398-e1a0f70a9023",
+        "sourceHandle": "6290af2b-d572-4329-b303-7915916e7e05|output",
+        "targetHandle": "b57ef981-674c-4c24-a398-e1a0f70a9023|input",
+        "data": {
+          "sourceHandle": {
+            "id": "6290af2b-d572-4329-b303-7915916e7e05",
+            "name": "output",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "id": "b57ef981-674c-4c24-a398-e1a0f70a9023",
+            "name": "input",
+            "input_types": [
+              "Message"
+            ]
+          }
+        }
+      },
+      {
+        "id": "ec7b2103-434b-419e-ac86-64d820aa5bde",
+        "source": "6290af2b-d572-4329-b303-7915916e7e05",
+        "target": "25e647c0-1e6c-43ea-b25b-c155ed7b79ea",
+        "sourceHandle": "6290af2b-d572-4329-b303-7915916e7e05|output",
+        "targetHandle": "25e647c0-1e6c-43ea-b25b-c155ed7b79ea|input",
+        "data": {
+          "sourceHandle": {
+            "id": "6290af2b-d572-4329-b303-7915916e7e05",
+            "name": "output",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "id": "25e647c0-1e6c-43ea-b25b-c155ed7b79ea",
+            "name": "input",
+            "input_types": [
+              "Message"
+            ]
+          }
+        }
+      },
+      {
+        "id": "becf29df-b8c1-4c2f-8316-c647b7997097",
+        "source": "b0c01bef-88bd-4309-9a07-af870a9c89c4",
+        "target": "7ebb3475-e903-4623-8370-c2175d921838",
+        "sourceHandle": "b0c01bef-88bd-4309-9a07-af870a9c89c4|output",
+        "targetHandle": "7ebb3475-e903-4623-8370-c2175d921838|input",
+        "data": {
+          "sourceHandle": {
+            "id": "b0c01bef-88bd-4309-9a07-af870a9c89c4",
+            "name": "output",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "id": "7ebb3475-e903-4623-8370-c2175d921838",
+            "name": "input",
+            "input_types": [
+              "Message"
+            ]
+          }
+        }
+      },
+      {
+        "id": "ce69a1af-3698-4abe-9179-a9f69dfd30fa",
+        "source": "b0c01bef-88bd-4309-9a07-af870a9c89c4",
+        "target": "b57ef981-674c-4c24-a398-e1a0f70a9023",
+        "sourceHandle": "b0c01bef-88bd-4309-9a07-af870a9c89c4|output",
+        "targetHandle": "b57ef981-674c-4c24-a398-e1a0f70a9023|input",
+        "data": {
+          "sourceHandle": {
+            "id": "b0c01bef-88bd-4309-9a07-af870a9c89c4",
+            "name": "output",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "id": "b57ef981-674c-4c24-a398-e1a0f70a9023",
+            "name": "input",
+            "input_types": [
+              "Message"
+            ]
+          }
+        }
+      },
+      {
+        "id": "fbf2669c-82b4-499b-adfb-210acb9de7a7",
+        "source": "b0c01bef-88bd-4309-9a07-af870a9c89c4",
+        "target": "25e647c0-1e6c-43ea-b25b-c155ed7b79ea",
+        "sourceHandle": "b0c01bef-88bd-4309-9a07-af870a9c89c4|output",
+        "targetHandle": "25e647c0-1e6c-43ea-b25b-c155ed7b79ea|input",
+        "data": {
+          "sourceHandle": {
+            "id": "b0c01bef-88bd-4309-9a07-af870a9c89c4",
+            "name": "output",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "id": "25e647c0-1e6c-43ea-b25b-c155ed7b79ea",
+            "name": "input",
+            "input_types": [
+              "Message"
+            ]
+          }
+        }
+      },
+      {
+        "id": "fcafe7e1-723e-466d-849c-c850f68434cc",
+        "source": "a844a2f9-7a79-4dfb-a850-d1cdab7172a6",
+        "target": "7ebb3475-e903-4623-8370-c2175d921838",
+        "sourceHandle": "a844a2f9-7a79-4dfb-a850-d1cdab7172a6|output",
+        "targetHandle": "7ebb3475-e903-4623-8370-c2175d921838|input",
+        "data": {
+          "sourceHandle": {
+            "id": "a844a2f9-7a79-4dfb-a850-d1cdab7172a6",
+            "name": "output",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "id": "7ebb3475-e903-4623-8370-c2175d921838",
+            "name": "input",
+            "input_types": [
+              "Message"
+            ]
+          }
+        }
+      },
+      {
+        "id": "d0190424-db55-44f2-b56f-882d083cb2a2",
+        "source": "a844a2f9-7a79-4dfb-a850-d1cdab7172a6",
+        "target": "b57ef981-674c-4c24-a398-e1a0f70a9023",
+        "sourceHandle": "a844a2f9-7a79-4dfb-a850-d1cdab7172a6|output",
+        "targetHandle": "b57ef981-674c-4c24-a398-e1a0f70a9023|input",
+        "data": {
+          "sourceHandle": {
+            "id": "a844a2f9-7a79-4dfb-a850-d1cdab7172a6",
+            "name": "output",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "id": "b57ef981-674c-4c24-a398-e1a0f70a9023",
+            "name": "input",
+            "input_types": [
+              "Message"
+            ]
+          }
+        }
+      },
+      {
+        "id": "e2744a60-0a28-4eb9-8ecf-92b1019835b0",
+        "source": "a844a2f9-7a79-4dfb-a850-d1cdab7172a6",
+        "target": "25e647c0-1e6c-43ea-b25b-c155ed7b79ea",
+        "sourceHandle": "a844a2f9-7a79-4dfb-a850-d1cdab7172a6|output",
+        "targetHandle": "25e647c0-1e6c-43ea-b25b-c155ed7b79ea|input",
+        "data": {
+          "sourceHandle": {
+            "id": "a844a2f9-7a79-4dfb-a850-d1cdab7172a6",
+            "name": "output",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "id": "25e647c0-1e6c-43ea-b25b-c155ed7b79ea",
+            "name": "input",
+            "input_types": [
+              "Message"
+            ]
+          }
+        }
+      },
+      {
+        "id": "8a71a490-46e3-4bc8-8b61-8d660d1bf63b",
+        "source": "7ebb3475-e903-4623-8370-c2175d921838",
+        "target": "729d08ef-b52e-4e2f-9507-f624e05085c9",
+        "sourceHandle": "7ebb3475-e903-4623-8370-c2175d921838|output",
+        "targetHandle": "729d08ef-b52e-4e2f-9507-f624e05085c9|input",
+        "data": {
+          "sourceHandle": {
+            "id": "7ebb3475-e903-4623-8370-c2175d921838",
+            "name": "output",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "id": "729d08ef-b52e-4e2f-9507-f624e05085c9",
+            "name": "input",
+            "input_types": [
+              "Message"
+            ]
+          }
+        }
+      },
+      {
+        "id": "3fe2d2e9-2f89-4f66-aabc-ddb6d73e1017",
+        "source": "b57ef981-674c-4c24-a398-e1a0f70a9023",
+        "target": "729d08ef-b52e-4e2f-9507-f624e05085c9",
+        "sourceHandle": "b57ef981-674c-4c24-a398-e1a0f70a9023|output",
+        "targetHandle": "729d08ef-b52e-4e2f-9507-f624e05085c9|input",
+        "data": {
+          "sourceHandle": {
+            "id": "b57ef981-674c-4c24-a398-e1a0f70a9023",
+            "name": "output",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "id": "729d08ef-b52e-4e2f-9507-f624e05085c9",
+            "name": "input",
+            "input_types": [
+              "Message"
+            ]
+          }
+        }
+      },
+      {
+        "id": "34b752e9-8a14-454f-abf4-e73fe5a3b2dc",
+        "source": "25e647c0-1e6c-43ea-b25b-c155ed7b79ea",
+        "target": "729d08ef-b52e-4e2f-9507-f624e05085c9",
+        "sourceHandle": "25e647c0-1e6c-43ea-b25b-c155ed7b79ea|output",
+        "targetHandle": "729d08ef-b52e-4e2f-9507-f624e05085c9|input",
+        "data": {
+          "sourceHandle": {
+            "id": "25e647c0-1e6c-43ea-b25b-c155ed7b79ea",
+            "name": "output",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "id": "729d08ef-b52e-4e2f-9507-f624e05085c9",
+            "name": "input",
+            "input_types": [
+              "Message"
+            ]
+          }
+        }
+      },
+      {
+        "id": "10342a2b-fad4-4a2f-81c0-c2c865ccf8a2",
+        "source": "729d08ef-b52e-4e2f-9507-f624e05085c9",
+        "target": "e28308bb-639c-458b-853d-293197553fe4",
+        "sourceHandle": "729d08ef-b52e-4e2f-9507-f624e05085c9|output",
+        "targetHandle": "e28308bb-639c-458b-853d-293197553fe4|input",
+        "data": {
+          "sourceHandle": {
+            "id": "729d08ef-b52e-4e2f-9507-f624e05085c9",
+            "name": "output",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "id": "e28308bb-639c-458b-853d-293197553fe4",
+            "name": "input",
+            "input_types": [
+              "Message"
+            ]
+          }
+        }
+      },
+      {
+        "id": "0900919b-4f6a-4d84-a69c-06698377c22f",
+        "source": "e28308bb-639c-458b-853d-293197553fe4",
+        "target": "8522be76-1a67-4a63-b5f6-091cb9e3d692",
+        "sourceHandle": "e28308bb-639c-458b-853d-293197553fe4|output",
+        "targetHandle": "8522be76-1a67-4a63-b5f6-091cb9e3d692|input",
+        "data": {
+          "sourceHandle": {
+            "id": "e28308bb-639c-458b-853d-293197553fe4",
+            "name": "output",
+            "output_types": [
+              "Message"
+            ]
+          },
+          "targetHandle": {
+            "id": "8522be76-1a67-4a63-b5f6-091cb9e3d692",
+            "name": "input",
+            "input_types": [
+              "Message"
+            ]
+          }
+        }
+      }
+    ]
+  },
+  "name": "LandIQ Full Pipeline",
+  "description": "Complete LandIQ agent pipeline \u2014 10 agents in 4 layers with LLM-planned orchestration",
+  "is_component": false
+}

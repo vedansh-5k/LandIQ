@@ -315,12 +315,30 @@ def _is_rate_limit_error(e):
     return "429" in msg or "rate limit" in msg or "rate_limit" in msg
 
 
+def _extract_text(raw):
+    """Newer Gemini responses return .content as a list of content blocks
+    (e.g. [{"type": "text", "text": "...", "extras": {"signature": "..."}}])
+    instead of a plain string. Normalize either shape to plain text."""
+    content = getattr(raw, "content", raw)
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts = []
+        for item in content:
+            if isinstance(item, str):
+                parts.append(item)
+            elif isinstance(item, dict) and item.get("type") == "text":
+                parts.append(item.get("text", ""))
+        return "".join(parts)
+    return str(content)
+
+
 def _gemini_invoke(system_prompt, human_prompt, temperature):
     """Fast fallback when Groq is rate-limited (429) or its daily quota is spent."""
     from langchain_google_genai import ChatGoogleGenerativeAI
     g = ChatGoogleGenerativeAI(
         google_api_key=os.environ.get("GOOGLE_API_KEY", ""),
-        model=os.environ.get("GEMINI_MODEL", "gemini-2.0-flash"),
+        model=os.environ.get("GEMINI_MODEL", "gemini-flash-latest"),
         temperature=temperature,
         max_output_tokens=MAX_OUT_TOKENS,
     )
@@ -328,6 +346,9 @@ def _gemini_invoke(system_prompt, human_prompt, temperature):
 
 
 def run_dynamic_agent(agent_name, state):
+    t0 = time.time()
+    it = ot = 0
+
     try:
         agent = _load_agent(agent_name)
     except FileNotFoundError as e:
@@ -338,15 +359,69 @@ def run_dynamic_agent(agent_name, state):
         return {"error_log": ["%s load error: %s" % (agent_name, str(e)[:120])],
                 "completed_agents": ["%s (Load Error)" % agent_name]}
 
+    # ── Optional live prompt override (e.g. a Langflow node's editable
+    # "agent_prompt" field, pre-filled with the real AGENT.md content but
+    # editable by the user before a run). Empty/unset -> no change, the
+    # file's own role_text is used exactly as before.
+    role_override = state.get("agent_role_override")
+    if isinstance(role_override, str) and role_override.strip():
+        agent["role_text"] = role_override
+
     system_prompt, human_prompt = _build_prompt(agent, state)
 
-    # Get primary LLM (RouterChatModel via factory, or direct Groq)
+    # ── Headroom: compress input tokens before they reach the LLM ──
+    # Driven by the user-set headroom_mode flag on the request (never hardcoded).
+    if state.get("headroom_mode"):
+        try:
+            from src.utils.headroom_bridge import headroom_compress, record_manual_compression
+            hr_sys = headroom_compress(system_prompt)
+            hr_human = headroom_compress(human_prompt)
+            system_prompt = hr_sys["compressed_text"]
+            human_prompt = hr_human["compressed_text"]
+            record_manual_compression(
+                hr_sys["original_tokens"] + hr_human["original_tokens"],
+                hr_sys["compressed_tokens"] + hr_human["compressed_tokens"],
+            )
+        except Exception as e:
+            logger.warning("[%s] headroom compression skipped: %s", agent_name, str(e)[:100])
+
+    # ── Optional live model override (e.g. a Langflow node's "llm_model"
+    # dropdown — "groq/llama-3.3-70b-versatile" or "gemini/gemini-1.5-flash").
+    # Unset/unrecognised -> falls through to the normal active-config
+    # selection below exactly as before.
     llm = None
-    try:
-        from src.utils.llm_factory import get_llm_for_agent
-        llm = get_llm_for_agent(agent_name, temperature=agent["temperature"])
-    except Exception:
-        pass
+    llm_override = state.get("llm_model_override")
+    if isinstance(llm_override, str) and "/" in llm_override:
+        _provider_hint, _, _model_hint = llm_override.partition("/")
+        _provider_hint = _provider_hint.strip().lower()
+        _model_hint = _model_hint.strip()
+        try:
+            if _provider_hint == "groq" and os.environ.get("GROQ_API_KEY"):
+                from langchain_groq import ChatGroq
+                llm = ChatGroq(
+                    api_key=os.environ["GROQ_API_KEY"],
+                    model=_model_hint or "llama-3.3-70b-versatile",
+                    temperature=agent["temperature"],
+                    max_tokens=MAX_OUT_TOKENS,
+                )
+            elif _provider_hint in ("gemini", "google") and os.environ.get("GOOGLE_API_KEY"):
+                from langchain_google_genai import ChatGoogleGenerativeAI
+                llm = ChatGoogleGenerativeAI(
+                    google_api_key=os.environ["GOOGLE_API_KEY"],
+                    model=_model_hint or "gemini-1.5-flash",
+                    temperature=agent["temperature"],
+                )
+        except Exception as e:
+            logger.warning("[%s] llm_model_override '%s' failed: %s", agent_name, llm_override, str(e)[:100])
+            llm = None
+
+    # Get primary LLM (RouterChatModel via factory, or direct Groq) if no override applied
+    if llm is None:
+        try:
+            from src.utils.llm_factory import get_llm_for_agent
+            llm = get_llm_for_agent(agent_name, temperature=agent["temperature"])
+        except Exception:
+            pass
 
     if llm is None:
         try:
@@ -413,8 +488,7 @@ def run_dynamic_agent(agent_name, state):
     # ── Parse JSON output ──
     text = ""
     try:
-        text = raw.content if hasattr(raw, "content") else str(raw)
-        text = text.strip()
+        text = _extract_text(raw).strip()
         if "```" in text:
             text = re.sub(r"```(?:json)?", "", text).replace("```", "").strip()
         try:
@@ -424,7 +498,23 @@ def run_dynamic_agent(agent_name, state):
             output = json.loads(m.group()) if m else {"raw_output": text[:500]}
     except Exception as e:
         logger.error("[%s] parse failed: %s", agent_name, e)
-        output = {"raw_output": str(getattr(raw, "content", raw))[:500]}
+        output = {"raw_output": _extract_text(raw)[:500]}
+
+    # ── Caveman: measure REAL output-token savings on the LLM's raw text ──
+    # Only measured (not applied to `output`) — the structured fields shown in
+    # the UI stay exactly as the LLM returned them; inject_caveman() already
+    # shrinks output tokens by instructing the model, this just reports the
+    # real savings instead of the frontend's old hardcoded ~65% guess.
+    if state.get("caveman_mode") and text:
+        try:
+            from src.utils.compression_utils import caveman_compress, record_caveman_compression
+            level = state.get("caveman_level", "full")
+            if level not in ("lite", "full", "ultra"):
+                level = "full"
+            cav = caveman_compress(text, mode=level)
+            record_caveman_compression(cav.original_tokens, cav.compressed_tokens)
+        except Exception as e:
+            logger.warning("[%s] caveman measurement skipped: %s", agent_name, str(e)[:100])
 
     # ══════════════════════════════════════════════════════════════════════════
     # Record tokens for the report — provider-reported first, measured second
@@ -438,7 +528,7 @@ def run_dynamic_agent(agent_name, state):
         if not exact:
             # Provider sent no usage block (the external gateway does not).
             # Measure the real strings that actually went over the wire.
-            resp_text = raw.content if hasattr(raw, "content") else str(raw)
+            resp_text = _extract_text(raw)
             it = _count_tokens(system_prompt) + _count_tokens(human_prompt)
             ot = _count_tokens(resp_text)
 
@@ -459,6 +549,15 @@ def run_dynamic_agent(agent_name, state):
 
     return {
         "%s_output" % agent_name: output,
+        "%s_metadata" % agent_name: {
+            "agent": agent["display_name"],
+            "llm_provider": provider,
+            "llm_model_override": llm_override or None,
+            "input_tokens": it,
+            "output_tokens": ot,
+            "total_tokens": it + ot,
+            "duration_seconds": round(time.time() - t0, 2),
+        },
         "completed_agents": [agent["display_name"]],
     }
 

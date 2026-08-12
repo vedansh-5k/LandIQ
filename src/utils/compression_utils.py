@@ -10,6 +10,7 @@ Both return CompressionResult with original_tokens, compressed_tokens, savings_p
 """
 
 import re
+import threading
 from dataclasses import dataclass
 from typing import Literal
 
@@ -234,3 +235,43 @@ def apply_compression(
         current = r.text
 
     return {"text": current, "compression_stats": stats}
+
+
+# ── Session-level accumulator for real caveman output savings (thread-safe) ──
+# Mirrors the pattern used by src.utils.tracked_chain for token accounting,
+# so stats survive the orchestrator's ThreadPoolExecutor-based agent layers.
+_caveman_lock = threading.Lock()
+_caveman_session = {"original_tokens": 0, "compressed_tokens": 0, "calls": 0}
+
+
+def reset_caveman_session():
+    global _caveman_session
+    with _caveman_lock:
+        _caveman_session = {"original_tokens": 0, "compressed_tokens": 0, "calls": 0}
+
+
+def record_caveman_compression(original_tokens: int, compressed_tokens: int):
+    with _caveman_lock:
+        _caveman_session["original_tokens"] += int(original_tokens or 0)
+        _caveman_session["compressed_tokens"] += int(compressed_tokens or 0)
+        _caveman_session["calls"] += 1
+
+
+def get_caveman_session_stats():
+    """Real, measured caveman savings for the current /analyse session, or
+    None if caveman_mode was never on (no agent outputs measured)."""
+    with _caveman_lock:
+        orig = _caveman_session["original_tokens"]
+        comp = _caveman_session["compressed_tokens"]
+        calls = _caveman_session["calls"]
+    if calls == 0:
+        return None
+    saved = orig - comp
+    pct = (saved / orig * 100) if orig > 0 else 0.0
+    return {
+        "original_tokens": orig,
+        "compressed_tokens": comp,
+        "savings_tokens": saved,
+        "savings_pct": round(pct, 2),
+        "calls_compressed": calls,
+    }

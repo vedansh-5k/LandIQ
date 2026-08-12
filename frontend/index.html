@@ -246,6 +246,11 @@
     .orch-hdr{display:flex;align-items:center;gap:12px;margin-bottom:20px;}
     .orch-ttl{font-family:'Cormorant Garamond',serif;font-size:19px;font-weight:600;color:var(--white);}
     .orch-bdg{font-size:10px;font-weight:700;background:var(--gold);color:var(--forest);padding:4px 13px;border-radius:100px;letter-spacing:1px;text-transform:uppercase;}
+    .orch-bdg.src-llm{background:var(--sage);color:var(--white);}
+    .orch-bdg.src-default{background:var(--gold);color:var(--forest);}
+    .orch-src-bdg{font-size:10px;font-weight:700;padding:4px 13px;border-radius:100px;letter-spacing:1px;text-transform:uppercase;margin-left:8px;}
+    .orch-src-bdg.langflow{background:#4a7fa8;color:var(--white);}
+    .orch-src-bdg.local{background:var(--stone);color:var(--forest);}
     .orch-layers{display:flex;flex-direction:column;gap:10px;}
     .orch-lrow{display:flex;align-items:flex-start;gap:14px;}
     .lnum{font-size:10px;font-weight:700;color:var(--gold);width:58px;flex-shrink:0;padding-top:7px;font-family:'JetBrains Mono',monospace;letter-spacing:.5px;}
@@ -646,6 +651,12 @@
             </div>
             <div class="cave-st" id="caveSt">🧠 Normal Mode — full detail responses</div>
           </div>
+          <div style="margin-top:10px;padding:8px 12px;background:rgba(139,115,85,0.08);border-radius:8px;display:flex;align-items:center;gap:10px;">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.92em;">
+              <input type="checkbox" id="headroomToggle" style="accent-color:var(--gold);width:16px;height:16px;">
+              <span>🗜️ <b>Headroom</b> — compress input tokens (saves 60-95%)</span>
+            </label>
+          </div>
           <button class="btn-analyse" onclick="submitAnalysis()">🔍 Analyse My Land</button>
           <div class="err-box" id="errBox"></div>
           <div class="btn-nav-row" style="margin-top:14px"><button class="btn-back" onclick="goStep(3)">← Back</button><span></span></div>
@@ -693,7 +704,7 @@
       <button class="btn-new-res" onclick="resetForm()">New Analysis</button>
     </div>
     <div class="orch-panel" id="orchPanel" style="display:none">
-      <div class="orch-hdr"><span style="font-size:24px">🧠</span><div class="orch-ttl">LLM Orchestrator Execution Plan</div><span class="orch-bdg" id="orchBdg">PLAN=LLM</span></div>
+      <div class="orch-hdr"><span style="font-size:24px">🧠</span><div class="orch-ttl">LLM Orchestrator Execution Plan</div><span class="orch-bdg" id="orchBdg">PLAN=LLM</span><span class="orch-src-bdg" id="orchSrcBdg">LOCAL</span></div>
       <div class="orch-layers" id="orchLayers"></div>
       <div class="orch-ftr" id="orchFtr"></div>
     </div>
@@ -1177,7 +1188,8 @@ async function submitAnalysis(){
     loan_interest_rate:parseFloat(document.getElementById('f_lrate')?.value)||0,
     selected_agents:selAgents,caveman_mode:caveOn,caveman_level:document.getElementById('caveLevel').value,
     selected_config:(document.getElementById('cfgSel')?.value)||selCfg||null,guardrail_mode:selGRMode,
-    guardrail_config:{local_path:document.getElementById('gr_lpath')?.value||'',api_url:document.getElementById('gr_aurl')?.value||'',api_key:document.getElementById('gr_akey')?.value||'',hf_model:document.getElementById('gr_hfm')?.value||'',hf_token:document.getElementById('gr_hft')?.value||''}};
+    guardrail_config:{local_path:document.getElementById('gr_lpath')?.value||'',api_url:document.getElementById('gr_aurl')?.value||'',api_key:document.getElementById('gr_akey')?.value||'',hf_model:document.getElementById('gr_hfm')?.value||'',hf_token:document.getElementById('gr_hft')?.value||''},
+    headroom_mode:document.getElementById('headroomToggle')?.checked||false};
   showLoad();
   try{const r=await fetch('/analyse',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
     const d=await r.json();hideLoad();if(!r.ok){showErr(d.detail||'Analysis failed.');return;}showResults(d,payload);
@@ -1215,14 +1227,33 @@ function showResults(data,payload){
   document.getElementById('resultsSection').scrollIntoView({behavior:'smooth'});
 }
 
+// Looks up an agent slug (e.g. "location") against the completed_agents
+// display-name list (e.g. "Location Intelligence Agent (Failed)") to decide
+// real pill status \u2014 'ok', 'fail', or null (agent never ran this session).
+function agentStatus(n,completed){
+  for(var i=0;i<completed.length;i++){
+    var c=completed[i];
+    var base=c.replace(/\s*\((Failed|Timeout|Missing|Load Error)\)\s*$/i,'').trim();
+    if(toKey(base)===n)return /\((Failed|Timeout|Missing|Load Error)\)/i.test(c)?'fail':'ok';
+  }
+  return null;
+}
+
 function buildOrch(data){
   var panel=document.getElementById('orchPanel');var completed=data.completed_agents||[];
   if(!completed.length){panel.style.display='none';return;}panel.style.display='block';
-  var layers=[];var op=data.orch_plan;
+  var layers=[];var op=data.execution_plan||data.orch_plan;
   if(op&&op.layers&&op.layers.length){layers=op.layers;}
   else{var l1=[],l2=[],l3=[],l4=[];completed.forEach(function(a){var k=toKey(a);if(k==='senior_consultant')l4.push(k);else if(k==='due_diligence')l3.push(k);else if(k==='bull'||k==='bear')l2.push(k);else l1.push(k);});if(l1.length)layers.push(l1);if(l2.length)layers.push(l2);if(l3.length)layers.push(l3);if(l4.length)layers.push(l4);if(!layers.length)layers=[completed.map(toKey)];}
-  document.getElementById('orchBdg').textContent='PLAN='+(op&&op.source?op.source.toUpperCase():'LLM');
-  document.getElementById('orchLayers').innerHTML=layers.map(function(agents,i){var pills=agents.map(function(n){var isDyn=!CORE.has(n);return '<span class="lpill '+(isDyn?'dyn':'core')+'">'+(isDyn?'\u2728 ':'\u2713 ')+n.replace(/_/g,' ')+'</span>';}).join('');return '<div class="orch-lrow"><span class="lnum">Layer '+(i+1)+'</span><div class="lpills">'+pills+'</div></div>'+(i<layers.length-1?'<div class="larrow">\u2193</div>':'');}).join('');
+  var planSrc=(op&&op.source?op.source:'llm').toLowerCase();
+  var bdg=document.getElementById('orchBdg');
+  bdg.className='orch-bdg '+(planSrc==='llm'?'src-llm':'src-default');
+  bdg.textContent='PLAN='+planSrc.toUpperCase();
+  var orchSrc=(data.orchestrator_source||'local').toLowerCase();
+  var srcBdg=document.getElementById('orchSrcBdg');
+  srcBdg.className='orch-src-bdg '+(orchSrc==='langflow'?'langflow':'local');
+  srcBdg.textContent=orchSrc.toUpperCase();
+  document.getElementById('orchLayers').innerHTML=layers.map(function(agents,i){var pills=agents.map(function(n){var isDyn=!CORE.has(n);var st=agentStatus(n,completed);var icon=st==='fail'?'\u274c ':st==='ok'?'\u2705 ':(isDyn?'\u2728 ':'\u25cb ');return '<span class="lpill '+(isDyn?'dyn':'core')+'">'+icon+n.replace(/_/g,' ')+'</span>';}).join('');return '<div class="orch-lrow"><span class="lnum">Layer '+(i+1)+'</span><div class="lpills">'+pills+'</div></div>'+(i<layers.length-1?'<div class="larrow">\u2193</div>':'');}).join('');
   var tr=data.token_report||{};var timing=data.timing||{};var durStr=_dur(tr)||(timing.total_seconds?timing.total_seconds+'s':'\u2014');
   document.getElementById('orchFtr').innerHTML='<span class="ostat">Agents: <b>'+completed.length+'</b></span><span class="ostat">Layers: <b>'+layers.length+'</b></span>'+(Object.keys(data.dynamic_agents||{}).length?'<span class="ostat">Dynamic: <b>'+Object.keys(data.dynamic_agents).length+' \u2728</b></span>':'')+'<span class="ostat">Tokens: <b>'+(tr.total_tokens?Number(tr.total_tokens).toLocaleString():'\u2014')+'</b></span><span class="ostat">Duration: <b>'+durStr+'</b></span>'+(tr.estimated_cost_usd?'<span class="ostat">Cost: <b>$'+Number(tr.estimated_cost_usd).toFixed(4)+'</b></span>':'');
 }
@@ -1236,7 +1267,12 @@ function buildTok(data,payload){
   document.getElementById('tsGrid').innerHTML=[['Input Tokens',it>0?it.toLocaleString():'\u2014'],['Output Tokens',ot>0?ot.toLocaleString():'\u2014'],['Total Tokens',tt>0?tt.toLocaleString():'\u2014'],['Duration',dur||'\u2014'],['Est. Cost',cost>0?'$'+cost.toFixed(4):'\u2014'],['LLM Calls',calls||'\u2014'],['Start',timing.start_time||'\u2014'],['End',timing.end_time||'\u2014'],['Guardrail',selGRMode.toUpperCase()]].map(function(item){return '<div class="ts"><div class="v">'+item[1]+'</div><div class="l">'+item[0]+'</div></div>';}).join('');
   var cbd=tr.cost_breakdown||{};var bars='';
   if(cbd.input_cost_usd||cbd.output_cost_usd){bars+='<div class="cb-row"><span class="cb-lbl">\uD83D\uDCB5 Input Cost</span><div class="cb-track"><div class="cb-fill cb-g" style="width:'+(it/(tt||1)*100)+'%"></div></div><span class="cb-saved">$'+(cbd.input_cost_usd||0).toFixed(6)+'</span></div>';bars+='<div class="cb-row"><span class="cb-lbl">\uD83D\uDCB5 Output Cost</span><div class="cb-track"><div class="cb-fill cb-gold" style="width:'+(ot/(tt||1)*100)+'%"></div></div><span class="cb-saved">$'+(cbd.output_cost_usd||0).toFixed(6)+'</span></div>';}
-  if(data.caveman_mode){var cs=tr.caveman_stats||null;var lv=data.caveman_level||'full';var pct=cs&&cs.savings_pct?cs.savings_pct:{lite:40,full:65,ultra:80}[lv]||65;bars+='<div class="cb-row"><span class="cb-lbl">\uD83E\uDEA8 Caveman '+lv.toUpperCase()+'</span><div class="cb-track"><div class="cb-fill cb-gold" style="width:'+Math.min(pct,100)+'%"></div></div><span class="cb-saved">~'+parseFloat(pct).toFixed(0)+'% saved</span></div>';}
+  var cs=data.caveman_stats||null;
+  if(data.caveman_mode&&cs&&cs.savings_pct>0){bars+='<div class="cb-row"><span class="cb-lbl">\uD83E\uDEA8 Caveman '+(data.caveman_level||'full').toUpperCase()+'</span><div class="cb-track"><div class="cb-fill cb-gold" style="width:'+Math.min(cs.savings_pct,100)+'%"></div></div><span class="cb-saved">'+cs.original_tokens.toLocaleString()+' \u2192 '+cs.compressed_tokens.toLocaleString()+' ('+cs.savings_pct.toFixed(0)+'% saved)</span></div>';}
+  else{bars+='<div class="cb-row"><span class="cb-lbl">\uD83E\uDEA8 Caveman</span><div class="cb-track"><div class="cb-fill cb-gold" style="width:0%"></div></div><span class="cb-saved" style="color:var(--muted)">OFF</span></div>';}
+  var hs=data.headroom_stats||null;
+  if(hs&&hs.savings_pct>0){bars+='<div class="cb-row"><span class="cb-lbl">\uD83D\uDDDC\uFE0F Headroom</span><div class="cb-track"><div class="cb-fill cb-g" style="width:'+Math.min(hs.savings_pct,100)+'%"></div></div><span class="cb-saved">'+hs.original_tokens.toLocaleString()+' \u2192 '+hs.compressed_tokens.toLocaleString()+' ('+hs.savings_pct.toFixed(0)+'% saved)</span></div>';}
+  else{bars+='<div class="cb-row"><span class="cb-lbl">\uD83D\uDDDC\uFE0F Headroom</span><div class="cb-track"><div class="cb-fill cb-g" style="width:0%"></div></div><span class="cb-saved" style="color:var(--muted)">OFF</span></div>';}
   var ts=tr.toon_stats||null;if(ts&&ts.savings_pct!=null){bars+='<div class="cb-row"><span class="cb-lbl">\uD83C\uDF33 TOON</span><div class="cb-track"><div class="cb-fill cb-g" style="width:'+Math.min(ts.savings_pct,100)+'%"></div></div><span class="cb-saved">'+(ts.savings_tokens||0).toLocaleString()+' ('+parseFloat(ts.savings_pct).toFixed(1)+'%)</span></div>';}
   document.getElementById('cmpBars').innerHTML=bars;
   var log='';var perAgent=tr.per_agent_log||tr.per_call_log||tr.call_log||[];

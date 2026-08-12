@@ -34,6 +34,7 @@ def _load_env():
 _load_env()
 
 from src.utils.agent_loader import get_agent_catalogue
+from src.utils.headroom_bridge import headroom_compress, record_manual_compression
 
 _TC = None
 try:
@@ -307,6 +308,17 @@ def run_dynamic_advisor(user_inputs):
     start_clock = time.strftime("%H:%M:%S")
     _tc_call("reset_token_report")
 
+    try:
+        from src.utils.headroom_bridge import reset_manual_session
+        reset_manual_session()
+    except Exception:
+        pass
+    try:
+        from src.utils.compression_utils import reset_caveman_session
+        reset_caveman_session()
+    except Exception:
+        pass
+
     print("\n" + "#" * 55)
     print("# LANDIQ ORCHESTRATOR - %s, %s" % (state.get("area"), state.get("city")))
     print("#" * 55)
@@ -355,8 +367,16 @@ def run_dynamic_advisor(user_inputs):
         from src.rag.retriever import get_rag_context
         q = "%s %s %s %s land" % (state.get("area", ""), state.get("city", ""),
                                    state.get("state", ""), state.get("land_type", ""))
-        state["rag_context"] = get_rag_context(q)
-        print("  [1/3] RAG done")
+        raw_rag = get_rag_context(q)
+        if state.get("headroom_mode") and raw_rag:
+            hr = headroom_compress(raw_rag)
+            record_manual_compression(hr["original_tokens"], hr["compressed_tokens"])
+            state["rag_context"] = hr["compressed_text"]
+            print("  [1/3] RAG done — Headroom: %d -> %d tokens (%.1f%% saved)"
+                  % (hr["original_tokens"], hr["compressed_tokens"], hr["savings_pct"]))
+        else:
+            state["rag_context"] = raw_rag
+            print("  [1/3] RAG done")
     except Exception as e:
         state["rag_context"] = "No context available."
         print("  [1/3] RAG failed: %s" % str(e)[:60])
@@ -376,6 +396,23 @@ def run_dynamic_advisor(user_inputs):
           % (len(plan["layers"]), plan["source"]))
 
     for i, layer in enumerate(plan["layers"], 1):
+        if i > 1 and state.get("headroom_mode"):
+            _hr_before = _hr_after = 0
+            for k, v in state.items():
+                if not k.endswith("_output") or not isinstance(v, dict):
+                    continue
+                for fk, fv in v.items():
+                    if isinstance(fv, str) and len(fv) > 50:
+                        hr = headroom_compress(fv)
+                        v[fk] = hr["compressed_text"]
+                        _hr_before += hr["original_tokens"]
+                        _hr_after += hr["compressed_tokens"]
+            if _hr_before:
+                record_manual_compression(_hr_before, _hr_after)
+                _hr_pct = round((_hr_before - _hr_after) / _hr_before * 100, 1)
+                print("  [HEADROOM] Layer %d context: %d -> %d tokens (%.1f%% saved)"
+                      % (i, _hr_before, _hr_after, _hr_pct))
+
         print("\n  [Layer %d] %s" % (i, layer))
         t0 = time.time()
         try:
@@ -414,6 +451,17 @@ def run_dynamic_advisor(user_inputs):
     state["token_report"] = tokens
     state["timing"] = {"start_time": start_clock, "end_time": end_clock,
                        "total_seconds": session_duration}
+
+    try:
+        from src.utils.headroom_bridge import get_manual_session_stats
+        state["headroom_stats"] = get_manual_session_stats()
+    except Exception:
+        state["headroom_stats"] = None
+    try:
+        from src.utils.compression_utils import get_caveman_session_stats
+        state["caveman_stats"] = get_caveman_session_stats()
+    except Exception:
+        state["caveman_stats"] = None
 
     try:
         from src.utils.mlflow_tracker import log_analysis_run

@@ -17,7 +17,7 @@ from fastapi import FastAPI, HTTPException, Request, Header, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse, Response
-from pydantic import BaseModel, ValidationError
+from pydantic import BaseModel, ValidationError, field_validator
 
 logger = logging.getLogger(__name__)
 
@@ -103,6 +103,7 @@ from src.utils.agent_registry_manager import (
     _slugify,
 )
 from src.utils.compression_utils import apply_compression
+from src.utils.headroom_bridge import headroom_ctx, get_stats as get_headroom_stats, is_available as headroom_available, test_compression as headroom_test_compression
 
 
 # ── RATE LIMITER ───────────────────────────────────────────────────────────
@@ -161,6 +162,16 @@ class LandQueryRequest(BaseModel):
     selected_config: Optional[str] = None
     guardrail_mode: Optional[str] = "none"
     guardrail_config: Optional[dict] = None
+    headroom_mode: bool = False
+    skip_langflow: bool = False
+
+    @field_validator("pincode", mode="before")
+    @classmethod
+    def _pincode_as_str(cls, v):
+        # A JSON-body pincode like "560066" can arrive as an int when it passes
+        # through a caller that auto-coerces numeric-looking strings (e.g. the
+        # Langflow API Request node's body processing).
+        return str(v) if v is not None else v
 
 
 class GlobalModelCreate(BaseModel):
@@ -1092,9 +1103,69 @@ async def analyse_land(req: LandQueryRequest):
         set_active_external_config(req.selected_config, cfg.get("_external_base"))
     else:
         set_active_config(req.selected_config)
+    # Config is activated BEFORE the Langflow attempt below so that when the
+    # Langflow "LandIQ Orchestrator" component calls back into
+    # /run-single-agent for each agent, those calls use the same selected
+    # LLM config as the rest of this request (not whatever was last active).
+
+    final_state = None
+    _headroom_stats = None
 
     try:
-        final_state = run_dynamic_advisor(user_inputs)
+        # ── Langflow: try the visual pipeline first, fall back to local ─────
+        # skip_langflow is set True only by /internal/run-full-pipeline when IT
+        # calls back into this function, so Langflow can never trigger itself.
+        if not req.skip_langflow:
+            try:
+                from src.utils.langflow_bridge import is_langflow_running, get_flow_id, run_langflow
+                _lf_flow_id = get_flow_id()
+                if is_langflow_running() and _lf_flow_id:
+                    print(f"  [LANGFLOW] Attempting via flow {_lf_flow_id}...")
+                    _lf_result = await run_langflow(_json.dumps(user_inputs), timeout=300)
+                    _lf_parsed = None
+                    if _lf_result and _lf_result.get("response"):
+                        _lf_text = _lf_result["response"]
+                        try:
+                            _lf_parsed = _json.loads(_lf_text)
+                        except Exception:
+                            try:
+                                import ast as _ast
+                                _lf_parsed = _ast.literal_eval(_lf_text)
+                            except Exception:
+                                _lf_parsed = None
+                        print(f"[LANGFLOW DEBUG] Raw response type: {type(_lf_parsed)}")
+                        print(f"[LANGFLOW DEBUG] Raw response keys: {_lf_parsed.keys() if isinstance(_lf_parsed, dict) else 'not a dict'}")
+                        print(f"[LANGFLOW DEBUG] Raw response (first 500 chars): {str(_lf_parsed)[:500]}")
+                    # The "LandIQ Orchestrator" Langflow component (see
+                    # src/langflow/orchestrator_component_v2.py) returns the
+                    # SAME state-shaped dict run_dynamic_advisor() returns —
+                    # location_output, completed_agents, execution_plan,
+                    # total_time_seconds, orchestrator_source, etc — NOT the
+                    # final /analyse response shape (it has no "success" or
+                    # "recommendation" key). So it's used as a drop-in
+                    # replacement for final_state and flows through the exact
+                    # same assembly code below as the local path, instead of
+                    # being returned directly.
+                    if isinstance(_lf_parsed, dict) and _lf_parsed.get("completed_agents"):
+                        final_state = _lf_parsed
+                        final_state.setdefault("orchestrator_source", "langflow")
+                        print(f"  [LANGFLOW] Success — {len(final_state.get('completed_agents', []))} agents completed")
+                    else:
+                        print("  [LANGFLOW] No usable structured result — falling back to local")
+                else:
+                    print("  [LANGFLOW] Not running or no flow configured — using local orchestrator")
+            except Exception as e:
+                print(f"  [LANGFLOW] Attempt failed ({str(e)[:120]}) — falling back to local")
+
+        if final_state is None:
+            # ── Headroom: compress input tokens if enabled ──
+            _hm = user_inputs.get('headroom_mode', False)
+            with headroom_ctx(_hm):
+                final_state = run_dynamic_advisor(user_inputs)
+            final_state.setdefault("orchestrator_source", "local")
+            _headroom_stats = get_headroom_stats()
+        else:
+            _headroom_stats = {"enabled": False, "available": headroom_available()}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Analysis failed: {str(e)}")
     finally:
@@ -1177,6 +1248,11 @@ async def analyse_land(req: LandQueryRequest):
         "completed_agents": final_state.get("completed_agents", []),
         "errors":           final_state.get("error_log", []),
         "token_report":     tokens,
+        "headroom_report":  _headroom_stats,
+        "headroom_stats":   final_state.get("headroom_stats"),
+        "caveman_stats":    final_state.get("caveman_stats"),
+        "execution_plan":   final_state.get("execution_plan"),
+        "orchestrator_source": final_state.get("orchestrator_source", "local"),
         "dynamic_agents":   dynamic_outputs,
         "orch_plan":        final_state.get("_orch_plan", None),
         "timing": {
@@ -1184,6 +1260,7 @@ async def analyse_land(req: LandQueryRequest):
             "start_time": time.strftime("%H:%M:%S", time.localtime(session_start)),
             "end_time": time.strftime("%H:%M:%S", time.localtime()),
         },
+        "total_time_seconds": final_state.get("total_time_seconds"),
         "mlflow_logged":    final_state.get("mlflow_logged", False),
     }
 
@@ -1347,6 +1424,220 @@ Default: residential, buy_and_hold, moderate."""
 
 
 # ── ENTRY POINT ────────────────────────────────────────────────────────────
+
+
+# ══════════════════════════════════════════════════════
+#  LANGFLOW INTEGRATION — added by patch_langflow.py
+# ══════════════════════════════════════════════════════
+from src.utils.langflow_bridge import is_langflow_running, run_via_langflow, get_flow_id
+
+# NOTE: /langflow/status is intentionally NOT defined here. It's served by
+# langflow_router (src/utils/langflow_routes.py) below, which returns the
+# richer {online, base_url, flow_id, agents_detected, mode} dict that
+# frontend/langflow.html actually expects. A duplicate bool-returning
+# /langflow/status used to be defined here and silently shadowed it.
+
+@app.post("/langflow/run")
+def run_langflow_pipeline(req: LandQueryRequest):
+    """Run analysis through Langflow visual pipeline."""
+    try:
+        result = run_via_langflow(_json.dumps(req.model_dump()))
+        if result is None:
+            return {"success": False, "error": "Langflow flow returned no output", "note": "Visual canvas is available at localhost:7860"}
+        if result is None:
+            return {"success": False, "error": "Langflow flow returned no output", "note": "Visual canvas available at localhost:7860"}
+        if result is None:
+            return {"success": False, "error": "Langflow flow returned no output", "note": "Visual canvas available at localhost:7860"}
+        return {"success": True, **result}
+    except Exception as e:
+        return {"success": False, "error": str(e), "fallback": "use /analyse instead"}
+
+@app.get("/langflow/flow-id")
+def get_langflow_flow_id():
+    """Return the configured Langflow flow ID."""
+    from src.utils.langflow_bridge import _get_flow_id
+    fid = _get_flow_id()
+    return {"flow_id": fid or "not_configured"}
+
+# ══════════════════════════════════════════════════════
+
+
+
+# ── LANGFLOW_ROUTER_BLOCK — added by patch_api_langflow.py ──────────────
+# Additive only. If this import fails, LandIQ boots exactly as before.
+try:
+    from src.utils.langflow_routes import langflow_router, internal_router
+    app.include_router(langflow_router)
+    app.include_router(internal_router)
+    print("[Langflow] routes registered at /langflow/* and /internal/*")
+except Exception as _langflow_exc:  # pragma: no cover
+    print(f"[Langflow] routes not loaded ({_langflow_exc}) — local orchestrator unaffected")
+# ── end LANGFLOW_ROUTER_BLOCK ──────────────────────────────────────────
+
+
+# >>> LANDIQ_LANGFLOW_BLOCK_START
+# =====================================================================
+#  LANDIQ REGISTRY + LANGFLOW SUPPORT ENDPOINTS
+#  Added by fix_api_paste.py - do not move below __main__
+# =====================================================================
+
+_REGISTRY_DIR = _Path("agents_registry")
+
+
+def _safe_agent_name(name: str) -> str:
+    if not name or "/" in name or "\\" in name or ".." in name:
+        raise HTTPException(status_code=400, detail="Invalid agent name")
+    return name
+
+
+@app.get("/registry/agents")
+def registry_list_agents():
+    """Every agent folder currently present in agents_registry/."""
+    agents = []
+    if _REGISTRY_DIR.exists():
+        for d in sorted(_REGISTRY_DIR.iterdir()):
+            if d.is_dir() and not d.name.startswith((".", "_")):
+                agents.append({
+                    "name": d.name,
+                    "agent_md": (d / "AGENT.md").exists(),
+                    "skill_md": (d / "SKILL.md").exists(),
+                })
+    return {
+        "count": len(agents),
+        "source": str(_REGISTRY_DIR.resolve()),
+        "agents": agents,
+    }
+
+
+@app.get("/registry/agents/{agent_name}")
+def registry_agent_detail(agent_name: str):
+    """Live metadata for one agent, parsed straight from its markdown files."""
+    agent_name = _safe_agent_name(agent_name)
+    d = _REGISTRY_DIR / agent_name
+    if not d.is_dir():
+        raise HTTPException(status_code=404, detail="Agent '%s' not found" % agent_name)
+
+    def _read(p, limit=1500):
+        try:
+            return p.read_text(encoding="utf-8", errors="ignore")[:limit]
+        except Exception:
+            return ""
+
+    agent_md = _read(d / "AGENT.md")
+    skill_md = _read(d / "SKILL.md")
+
+    display = agent_name.replace("_", " ").replace("-", " ").title()
+    for line in agent_md.splitlines():
+        s = line.strip()
+        if s.startswith("#"):
+            display = s.lstrip("#").strip() or display
+            break
+
+    return {
+        "status": "loaded",
+        "agent": agent_name,
+        "display_name": display,
+        "loaded_from": str(d.resolve()),
+        "files": sorted(p.name for p in d.iterdir() if p.is_file()),
+        "agent_md_preview": agent_md[:700],
+        "skill_md_preview": skill_md[:700],
+    }
+
+
+LANGFLOW_BASE = os.getenv("LANGFLOW_BASE_URL", "http://127.0.0.1:7860")
+
+
+def _landiq_flow_id() -> str:
+    p = _Path("langflow_flow_id.txt")
+    if p.exists():
+        return p.read_text(encoding="utf-8").strip()
+    return os.getenv("LANGFLOW_FLOW_ID", "")
+
+
+@app.get("/langflow/diag")
+async def langflow_diag():
+    """Dependency-free Langflow health check. Never 500s."""
+    fid = _landiq_flow_id()
+    try:
+        async with httpx.AsyncClient(timeout=6) as c:
+            r = await c.get("%s/health" % LANGFLOW_BASE)
+        online = r.status_code < 400
+    except Exception as e:
+        return {"online": False, "base_url": LANGFLOW_BASE, "flow_id": fid,
+                "mode": "local_orchestrator", "error": str(e)[:200]}
+    return {
+        "online": online,
+        "base_url": LANGFLOW_BASE,
+        "flow_id": fid,
+        "ui_url": ("%s/flow/%s" % (LANGFLOW_BASE, fid)) if fid else LANGFLOW_BASE,
+        "mode": "langflow" if (online and fid) else "local_orchestrator",
+    }
+
+
+@app.get("/langflow/flows")
+async def langflow_list_flows():
+    try:
+        async with httpx.AsyncClient(timeout=10) as c:
+            r = await c.get("%s/api/v1/flows/" % LANGFLOW_BASE)
+        data = r.json() if r.status_code < 400 else []
+        if isinstance(data, dict):
+            data = data.get("items") or data.get("flows") or []
+        return {"success": True, "count": len(data),
+                "flows": [{"id": f.get("id"), "name": f.get("name")} for f in data]}
+    except Exception as e:
+        return {"success": False, "count": 0, "flows": [], "error": str(e)[:200]}
+
+# =====================================================================
+#  END LANDIQ REGISTRY + LANGFLOW SUPPORT ENDPOINTS
+# =====================================================================
+# <<< LANDIQ_LANGFLOW_BLOCK_END
+
+
+
+
+# ── Headroom: test endpoint ─────────────────────────────────────────
+@app.get("/headroom/status")
+def headroom_status():
+    """Check if Headroom is installed and available."""
+    return {
+        "available": headroom_available(),
+        "description": "Headroom compresses INPUT tokens (prompts, RAG, JSON) "
+                       "before they reach the LLM. Same answer, 60-95% fewer tokens.",
+        "github": "https://github.com/chopratejas/headroom",
+    }
+
+
+@app.post("/headroom/test")
+def headroom_test(text: str = "The residential property located in Whitefield, "
+                              "Bangalore, Karnataka has been analysed. The current "
+                              "price range is Rs 3500-4500 per sq yard based on "
+                              "comparable areas. The upcoming Namma Metro Phase 2 "
+                              "extension is expected to increase demand by 15-20%."):
+    """Test Headroom compression on a sample text."""
+    return headroom_test_compression(text)
+
+
+@app.post("/run-single-agent")
+async def run_single_agent(request: Request):
+    body = await request.json()
+    agent_name = body.get("agent_name")
+    state = body.get("state", {})
+    try:
+        from src.agents.dynamic_agent import run_dynamic_agent
+        result = run_dynamic_agent(agent_name, state)
+        return {"success": True, "agent": agent_name, "result": result}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+@app.post("/rag-context")
+async def rag_context(request: Request):
+    body = await request.json()
+    query = body.get("query", "")
+    from src.rag.retriever import get_rag_context
+    context = get_rag_context(query)
+    return {"context": context}
+
 
 if __name__ == "__main__":
     import uvicorn

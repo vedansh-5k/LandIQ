@@ -1352,12 +1352,12 @@ Default: residential, buy_and_hold, moderate."""
 # ══════════════════════════════════════════════════════
 #  LANGFLOW INTEGRATION — added by patch_langflow.py
 # ══════════════════════════════════════════════════════
-from src.utils.langflow_bridge import is_langflow_running, run_via_langflow, get_flow_id
+from src.utils.langflow_bridge import langflow_status, run_via_langflow
 
 @app.get("/langflow/status")
-def get_is_langflow_running():
+def get_langflow_status():
     """Check if Langflow is reachable and flow is configured."""
-    return is_langflow_running()
+    return langflow_status()
 
 @app.post("/langflow/run")
 def run_langflow_pipeline(req: LandQueryRequest):
@@ -1366,10 +1366,6 @@ def run_langflow_pipeline(req: LandQueryRequest):
         result = run_via_langflow(req.model_dump())
         if result is None:
             return {"success": False, "error": "Langflow flow returned no output", "note": "Visual canvas is available at localhost:7860"}
-        if result is None:
-            return {"success": False, "error": "Langflow flow returned no output", "note": "Visual canvas available at localhost:7860"}
-        if result is None:
-            return {"success": False, "error": "Langflow flow returned no output", "note": "Visual canvas available at localhost:7860"}
         return {"success": True, **result}
     except Exception as e:
         return {"success": False, "error": str(e), "fallback": "use /analyse instead"}
@@ -1383,18 +1379,6 @@ def get_langflow_flow_id():
 
 # ══════════════════════════════════════════════════════
 
-
-
-# ── LANGFLOW_ROUTER_BLOCK — added by patch_api_langflow.py ──────────────
-# Additive only. If this import fails, LandIQ boots exactly as before.
-try:
-    from src.utils.langflow_routes import langflow_router, internal_router
-    app.include_router(langflow_router)
-    app.include_router(internal_router)
-    print("[Langflow] routes registered at /langflow/* and /internal/*")
-except Exception as _langflow_exc:  # pragma: no cover
-    print(f"[Langflow] routes not loaded ({_langflow_exc}) — local orchestrator unaffected")
-# ── end LANGFLOW_ROUTER_BLOCK ──────────────────────────────────────────
 
 if __name__ == "__main__":
     import uvicorn
