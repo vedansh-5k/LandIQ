@@ -1,4 +1,5 @@
 import asyncio
+import os
 from litellm import Router
 
 router = Router(
@@ -6,7 +7,7 @@ router = Router(
         'model_name': 'test_chat',
         'litellm_params': {
             'model': 'gemini/gemini-2.0-flash',
-            'api_key': 'AQ.Ab8RN6K7c-68GbHNMRg3GWUwr8aOhgmbX5qlzWYoFaLWHRio7w',
+            'api_key': os.environ.get("GOOGLE_API_KEY", ""),
             'tpm': 100000,
             'rpm': 60
         }

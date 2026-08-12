@@ -9,3 +9,8 @@ models/
 *.sqlite3
 .env.local
 .env.production
+
+# contains real provider API keys (was accidentally committed - now removed from tracking)
+src/utils/configurator.db
+langflow_api_key.txt
+*.log
