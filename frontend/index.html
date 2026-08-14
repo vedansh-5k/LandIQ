@@ -6,7 +6,7 @@
   <title>LandIQ — Know Your Land Before You Spend a Rupee</title>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
   <style>
-    :root{--ink:#081209;--forest:#0e2415;--moss:#1a3a24;--sage:#2d6042;--leaf:#4a8c5c;--cream:#f6f3ea;--parch:#eee9dc;--stone:#d9d1bd;--gold:#c9a24b;--gold-lt:#ecd28a;--white:#ffffff;--muted:#6b7c6e;--red:#b03030;}
+    :root{--ink:#081209;--forest:#0e2415;--moss:#1a3a24;--sage:#2d6042;--leaf:#4a8c5c;--cream:#ddd2b8;--parch:#d0c3a0;--stone:#b7a67e;--gold:#c9a24b;--gold-lt:#ecd28a;--white:#ffffff;--muted:#5c5646;--red:#b03030;}
     *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
     html{scroll-behavior:smooth;}
     body{background:var(--cream);color:var(--ink);font-family:'Inter',sans-serif;overflow-x:hidden;}
@@ -24,8 +24,10 @@
     .nav-link:hover{color:var(--gold-lt);}.nav-link:hover::after{width:100%;}
     .nav-cta{background:var(--gold);color:var(--forest);border:none;border-radius:100px;padding:11px 26px;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.3px;transition:all .25s;}
     .nav-cta:hover{background:var(--gold-lt);transform:translateY(-1px);box-shadow:0 8px 24px rgba(201,162,75,.35);}
-    .hero{position:relative;height:100vh;min-height:700px;display:flex;align-items:flex-end;padding-bottom:96px;background:var(--forest);overflow:hidden;}
-    .hero-img{position:absolute;inset:-4%;background-image:url('https://images.unsplash.com/photo-1501696461415-6bd6660c6742?w=2000&q=85');background-size:cover;background-position:center 40%;opacity:.6;animation:kenburns 24s ease-in-out infinite alternate;}
+    .hero{position:relative;height:100vh;max-height:920px;min-height:600px;display:flex;align-items:center;padding:68px 0 64px;background:var(--forest);overflow:hidden;}
+    .hero-img{position:absolute;inset:-4% -4% -12%;background-image:url('https://images.unsplash.com/photo-1703850827351-a1be4d85a095?w=2000&q=85');background-size:cover;background-position:center 45%;opacity:.6;filter:saturate(1.25) contrast(1.08);animation:kenburns 24s ease-in-out infinite alternate;will-change:transform;}
+    .hero-scanlines{position:absolute;inset:0;background-image:repeating-linear-gradient(0deg,rgba(236,210,138,.05) 0px,rgba(236,210,138,.05) 1px,transparent 1px,transparent 3px);mix-blend-mode:overlay;opacity:.4;pointer-events:none;}
+    .hero-glow{position:absolute;left:-10%;bottom:-10%;width:60%;height:70%;background:radial-gradient(ellipse at bottom left,rgba(201,162,75,.16),transparent 65%);pointer-events:none;}
     @keyframes kenburns{from{transform:scale(1.06) translateY(0);}to{transform:scale(1.0) translateY(-10px);}}
     .hero-gradient{position:absolute;inset:0;background:radial-gradient(ellipse 80% 60% at 20% 100%,rgba(8,18,9,.9),transparent 65%),linear-gradient(to top,rgba(8,18,9,.97) 0%,rgba(8,18,9,.45) 45%,rgba(8,18,9,.15) 100%);}
     .hero-grain{position:absolute;inset:0;opacity:.05;pointer-events:none;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 240 240' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");}
@@ -46,6 +48,20 @@
     .hero-scroll{position:absolute;bottom:30px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:8px;color:rgba(255,255,255,.35);font-size:10px;letter-spacing:2.5px;text-transform:uppercase;animation:bounce 2.8s ease-in-out infinite;z-index:2;}
     .hero-scroll::after{content:'';width:1px;height:44px;background:linear-gradient(to bottom,var(--gold),transparent);}
     @keyframes bounce{0%,100%{transform:translateX(-50%) translateY(0);}50%{transform:translateX(-50%) translateY(7px);}}
+    .hero-live-card{position:absolute;z-index:3;right:64px;top:50%;transform:translateY(-50%);width:272px;background:rgba(8,18,9,.42);backdrop-filter:blur(20px) saturate(1.3);border:1px solid rgba(236,210,138,.22);border-radius:20px;padding:24px 26px;box-shadow:0 24px 64px rgba(8,18,9,.4);opacity:0;animation:cardIn 1s 1.15s cubic-bezier(.16,1,.3,1) forwards,cardFloat 5s 2.2s ease-in-out infinite;}
+    @keyframes cardIn{from{opacity:0;transform:translateY(-46%) scale(.96);}to{opacity:1;transform:translateY(-50%) scale(1);}}
+    @keyframes cardFloat{0%,100%{margin-top:0;}50%{margin-top:-10px;}}
+    .hlc-top{display:flex;align-items:center;gap:8px;font-size:10px;font-weight:700;letter-spacing:1.8px;color:var(--gold-lt);text-transform:uppercase;margin-bottom:18px;}
+    .hlc-dot{width:7px;height:7px;border-radius:50%;background:#4ade80;box-shadow:0 0 0 0 rgba(74,222,128,.6);animation:dotpulse 1.8s ease-out infinite;flex-shrink:0;}
+    @keyframes dotpulse{0%{box-shadow:0 0 0 0 rgba(74,222,128,.55);}70%{box-shadow:0 0 0 7px rgba(74,222,128,0);}100%{box-shadow:0 0 0 0 rgba(74,222,128,0);}}
+    .hlc-row{display:flex;justify-content:space-between;align-items:baseline;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.08);}
+    .hlc-row:last-of-type{border-bottom:none;}
+    .hlc-k{font-size:11.5px;color:rgba(255,255,255,.5);}
+    .hlc-v{font-family:'Cormorant Garamond',serif;font-size:19px;font-weight:600;color:var(--white);}
+    .hlc-agents{display:flex;flex-wrap:wrap;gap:6px;margin-top:16px;}
+    .hlc-chip{font-size:10px;font-weight:600;padding:5px 11px;border-radius:100px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:rgba(255,255,255,.68);}
+    .hlc-chip.plus{background:rgba(201,162,75,.16);border-color:rgba(236,210,138,.35);color:var(--gold-lt);}
+    @media(max-width:1080px){.hero-live-card{display:none;}}
     .stats-bar{background:var(--forest);border-bottom:1px solid rgba(236,210,138,.08);padding:0 48px;}
     .stats-inner{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr);}
     .stat-cell{padding:34px 24px;text-align:center;border-right:1px solid rgba(236,210,138,.08);position:relative;overflow:hidden;}
@@ -53,7 +69,10 @@
     .stat-num{font-family:'Cormorant Garamond',serif;font-size:42px;font-weight:600;color:var(--gold-lt);display:block;line-height:1;}
     .stat-lbl{font-size:10px;color:rgba(255,255,255,.42);text-transform:uppercase;letter-spacing:2px;margin-top:8px;}
     section{padding:110px 48px;}
-    .section-inner{max-width:1200px;margin:0 auto;}
+    .section-inner{max-width:1200px;margin:0 auto;position:relative;z-index:1;}
+    .topo{position:relative;}
+    .topo::before{content:'';position:absolute;inset:0;z-index:0;pointer-events:none;opacity:.55;background-size:560px 560px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='560' height='560'%3E%3Cg fill='none' stroke='%23d4cdc0' stroke-width='1'%3E%3Cpath d='M-40,80 Q100,20 240,80 T520,80 T800,80'/%3E%3Cpath d='M-40,160 Q100,100 240,160 T520,160 T800,160'/%3E%3Cpath d='M-40,240 Q100,180 240,240 T520,240 T800,240'/%3E%3Cpath d='M-40,320 Q100,260 240,320 T520,320 T800,320'/%3E%3Cpath d='M-40,400 Q100,340 240,400 T520,400 T800,400'/%3E%3Cpath d='M-40,480 Q100,420 240,480 T520,480 T800,480'/%3E%3C/g%3E%3C/svg%3E");}
+    .topo.dark::before{opacity:.06;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='560' height='560'%3E%3Cg fill='none' stroke='%23ecd28a' stroke-width='1'%3E%3Cpath d='M-40,80 Q100,20 240,80 T520,80 T800,80'/%3E%3Cpath d='M-40,160 Q100,100 240,160 T520,160 T800,160'/%3E%3Cpath d='M-40,240 Q100,180 240,240 T520,240 T800,240'/%3E%3Cpath d='M-40,320 Q100,260 240,320 T520,320 T800,320'/%3E%3Cpath d='M-40,400 Q100,340 240,400 T520,400 T800,400'/%3E%3Cpath d='M-40,480 Q100,420 240,480 T520,480 T800,480'/%3E%3C/g%3E%3C/svg%3E");}
     .eyebrow{font-size:10px;font-weight:700;color:var(--sage);text-transform:uppercase;letter-spacing:3px;margin-bottom:16px;display:flex;align-items:center;gap:10px;}
     .eyebrow::before{content:'';width:26px;height:1px;background:var(--gold);}
     .section-title{font-family:'Cormorant Garamond',serif;font-size:clamp(34px,4.2vw,56px);font-weight:600;line-height:1.08;letter-spacing:-1px;margin-bottom:18px;}
@@ -82,14 +101,14 @@
     .how-photo:hover img{transform:scale(1.05);}
     .how-photo::after{content:'';position:absolute;inset:0;background:linear-gradient(155deg,rgba(14,36,21,.22),transparent 55%);}
     .how-photo .tag{position:absolute;bottom:18px;left:18px;z-index:2;background:rgba(8,18,9,.72);backdrop-filter:blur(10px);border:1px solid rgba(236,210,138,.25);color:var(--gold-lt);font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:1.5px;padding:8px 16px;border-radius:100px;}
-    .how-num{font-family:'Cormorant Garamond',serif;font-size:84px;font-weight:700;line-height:1;margin-bottom:18px;background:linear-gradient(180deg,var(--stone),transparent);-webkit-background-clip:text;background-clip:text;color:transparent;}
+    .how-num{font-family:'Cormorant Garamond',serif;font-size:104px;font-weight:700;line-height:1;margin-bottom:10px;background:linear-gradient(180deg,var(--sage),var(--stone) 75%,transparent);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-stroke:1px rgba(45,96,66,.14);letter-spacing:-2px;}
     .how-title{font-family:'Cormorant Garamond',serif;font-size:36px;font-weight:600;line-height:1.18;margin-bottom:18px;color:var(--ink);}
     .how-desc{font-size:15px;color:var(--muted);line-height:1.9;margin-bottom:26px;font-weight:300;}
     .how-points{list-style:none;display:flex;flex-direction:column;gap:12px;}
     .how-points li{display:flex;align-items:flex-start;gap:12px;font-size:14px;color:var(--ink);line-height:1.55;}
     .how-points li::before{content:'—';color:var(--gold);font-weight:700;flex-shrink:0;}
     .photo-break{position:relative;height:540px;display:flex;align-items:center;justify-content:center;overflow:hidden;}
-    .photo-break-img{position:absolute;inset:-6%;background-size:cover;background-position:center;}
+    .photo-break-img{position:absolute;inset:-6%;background-size:cover;background-position:center;will-change:transform;}
     .photo-break-overlay{position:absolute;inset:0;background:rgba(8,18,9,.74);}
     .photo-break-content{position:relative;z-index:2;text-align:center;padding:0 48px;max-width:860px;}
     .photo-break-quote{font-family:'Cormorant Garamond',serif;font-size:clamp(28px,4vw,54px);font-style:italic;font-weight:400;color:var(--white);line-height:1.32;margin-bottom:22px;}
@@ -105,7 +124,7 @@
     .trust-desc{font-size:13.5px;color:rgba(255,255,255,.52);line-height:1.8;font-weight:300;}
     .trust-metric{font-family:'Cormorant Garamond',serif;font-size:34px;font-weight:700;color:var(--gold-lt);margin-top:18px;}
     .accuracy-section{position:relative;padding:120px 48px;overflow:hidden;}
-    .accuracy-bg{position:absolute;inset:0;background-image:url('https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=1600&q=80');background-size:cover;background-position:center;opacity:.1;}
+    .accuracy-bg{position:absolute;inset:0;background-image:url('https://images.unsplash.com/photo-1507064396389-c7452ac64f1c?w=1600&q=80');background-size:cover;background-position:center;opacity:.1;}
     .accuracy-inner{position:relative;z-index:2;max-width:1200px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:84px;align-items:center;}
     .accuracy-metrics{display:flex;flex-direction:column;gap:22px;}
     .metric-row{display:flex;flex-direction:column;gap:9px;}
@@ -152,7 +171,7 @@
     .agent-name{font-family:'Cormorant Garamond',serif;font-size:19px;font-weight:600;color:var(--ink);margin-bottom:9px;transition:color .3s;}
     .agent-desc{font-size:12px;color:var(--muted);line-height:1.65;transition:color .3s;}
     .cta-section{position:relative;padding:160px 48px;display:flex;align-items:center;justify-content:center;overflow:hidden;text-align:center;}
-    .cta-bg{position:absolute;inset:-6%;background-image:url('https://images.unsplash.com/photo-1472214103451-9374bd1c798e?w=1800&q=85');background-size:cover;background-position:center 65%;animation:kenburns 26s ease-in-out infinite alternate;}
+    .cta-bg{position:absolute;inset:-6%;background-image:url('https://images.unsplash.com/photo-1720155390935-f49e18525eb9?w=1800&q=85');background-size:cover;background-position:center 65%;animation:kenburns 26s ease-in-out infinite alternate;will-change:transform;}
     .cta-overlay{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(8,18,9,.88),rgba(8,18,9,.8));}
     .cta-content{position:relative;z-index:2;max-width:700px;}
     .cta-content h2{font-family:'Cormorant Garamond',serif;font-size:clamp(38px,5.4vw,72px);font-weight:600;color:var(--white);line-height:1.08;letter-spacing:-1.5px;margin-bottom:22px;}
@@ -385,7 +404,7 @@
   <button class="nav-cta" onclick="document.getElementById('mainForm').scrollIntoView({behavior:'smooth'})">Analyse My Land →</button>
 </nav>
 <section class="hero">
-  <div class="hero-img"></div><div class="hero-gradient"></div><div class="hero-grain"></div>
+  <div class="hero-img"></div><div class="hero-gradient"></div><div class="hero-scanlines"></div><div class="hero-glow"></div><div class="hero-grain"></div>
   <div class="hero-content">
     <div class="hero-eyebrow">AI-Powered Indian Land Intelligence</div>
     <h1><span class="hl">Know your land</span><span class="hl">before you</span><span class="hl"><em>spend a rupee.</em></span></h1>
@@ -394,6 +413,13 @@
       <button class="btn-hero" onclick="document.getElementById('mainForm').scrollIntoView({behavior:'smooth'})">Analyse My Land →</button>
       <button class="btn-hero-ghost" onclick="document.getElementById('orch').scrollIntoView({behavior:'smooth'})">Watch the Orchestrator</button>
     </div>
+  </div>
+  <div class="hero-live-card">
+    <div class="hlc-top"><span class="hlc-dot"></span>Live Orchestrator</div>
+    <div class="hlc-row"><span class="hlc-k">Agents Running</span><span class="hlc-v" id="heroCardAgents">10</span></div>
+    <div class="hlc-row"><span class="hlc-k">Plan Source</span><span class="hlc-v">LLM</span></div>
+    <div class="hlc-row"><span class="hlc-k">Verdict Time</span><span class="hlc-v">&lt;30s</span></div>
+    <div class="hlc-agents"><span class="hlc-chip">Legal</span><span class="hlc-chip">Financial</span><span class="hlc-chip">Market</span><span class="hlc-chip plus" id="heroCardMore">+7</span></div>
   </div>
   <div class="hero-scroll">Scroll</div>
 </section>
@@ -405,7 +431,7 @@
     <div class="stat-cell"><span class="stat-num">₹0</span><div class="stat-lbl">Cost to Analyse</div></div>
   </div>
 </div>
-<section class="orch-live" id="orch">
+<section class="orch-live topo dark" id="orch">
   <div class="section-inner">
     <div class="eyebrow reveal" style="color:rgba(236,210,138,.7)">The Engine Room</div>
     <div class="section-title reveal reveal-d1" style="color:var(--white)">One LLM plans it.<br/>Four layers execute it.</div>
@@ -420,13 +446,13 @@
     <div class="orch-caption">plan=llm · layers decided at runtime · agents in a layer run in parallel</div>
   </div>
 </section>
-<section class="how-section" id="how">
+<section class="how-section topo" id="how">
   <div class="section-inner">
     <div class="eyebrow reveal">How It Works</div>
     <div class="section-title reveal reveal-d1">Four steps to a complete<br/>land investment verdict.</div>
     <div style="height:64px"></div>
     <div class="how-step">
-      <div class="how-photo reveal"><img src="https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=900&q=80" alt="Your land" loading="lazy"/><span class="tag">STEP 01 · INPUT</span></div>
+      <div class="how-photo reveal"><img src="https://images.unsplash.com/photo-1564834552305-aea63611ff08?w=900&q=80" alt="Premium Noida residential development" loading="lazy"/><span class="tag">STEP 01 · INPUT</span></div>
       <div class="reveal reveal-d1"><div class="how-num">01</div><div class="how-title">Tell us about your land.</div><p class="how-desc">Enter the state, city, locality, size, type, and your budget. Takes 90 seconds. No sign-up, no fees.</p><ul class="how-points"><li>Location down to the locality level</li><li>Land type: residential, commercial, agricultural, industrial</li><li>Your full financial picture — budget, loan status</li></ul></div>
     </div>
     <div class="how-step reverse">
@@ -434,8 +460,8 @@
       <div class="reveal reveal-d1"><div class="how-num">02</div><div class="how-title">The LLM Orchestrator plans<br/>your analysis.</div><p class="how-desc">Not a fixed pipeline. An LLM reads your inputs and decides which agents to run, in what order, and in which parallel layers.</p><ul class="how-points"><li>Orchestrator call: <span style="font-family:'JetBrains Mono',monospace;font-size:12px;background:var(--parch);padding:2px 8px;border-radius:6px">plan=llm</span></li><li>Agents in the same layer run in parallel</li><li>New agents you create are automatically included</li></ul></div>
     </div>
     <div class="how-step">
-      <div class="how-photo reveal"><img src="https://images.unsplash.com/photo-1441974231531-c6227db76b6e?w=900&q=80" alt="Multi-agent" loading="lazy"/><span class="tag">STEP 03 · PARALLEL AGENTS</span></div>
-      <div class="reveal reveal-d1"><div class="how-num">03</div><div class="how-title">Eight specialist agents<br/>analyse in parallel.</div><p class="how-desc">Each agent is a domain expert — legal risk, financial returns, market timing, environmental hazards, bull case, bear case.</p><ul class="how-points"><li>Location Intelligence — connectivity, appreciation</li><li>Legal &amp; Title — encumbrances, RERA status</li><li>Financial ROI — 5yr/10yr returns, breakeven</li></ul></div>
+      <div class="how-photo reveal"><img src="https://images.unsplash.com/photo-1695667424131-a9680e0307ee?w=900&q=80" alt="Gurgaon business district" loading="lazy"/><span class="tag">STEP 03 · PARALLEL AGENTS</span></div>
+      <div class="reveal reveal-d1"><div class="how-num">03</div><div class="how-title"><span id="stepAgentCount">8</span> specialist agents<br/>analyse in parallel.</div><p class="how-desc">Each agent is a domain expert — legal risk, financial returns, market timing, environmental hazards, bull case, bear case.</p><ul class="how-points"><li>Location Intelligence — connectivity, appreciation</li><li>Legal &amp; Title — encumbrances, RERA status</li><li>Financial ROI — 5yr/10yr returns, breakeven</li></ul></div>
     </div>
     <div class="how-step reverse">
       <div class="how-photo reveal"><img src="https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=900&q=80" alt="Final recommendation" loading="lazy"/><span class="tag">STEP 04 · VERDICT</span></div>
@@ -444,14 +470,14 @@
   </div>
 </section>
 <div class="photo-break">
-  <div class="photo-break-img" style="background-image:url('https://images.unsplash.com/photo-1486325212027-8081e485255e?w=1700&q=80')"></div>
+  <div class="photo-break-img" style="background-image:url('https://images.unsplash.com/photo-1666843527155-14ec5f016802?w=1700&q=80')"></div>
   <div class="photo-break-overlay"></div>
   <div class="photo-break-content reveal">
     <div class="photo-break-quote">"Most land buyers in India decide based on what their neighbour did. LandIQ gives you what your neighbour doesn't have — an unbiased AI verdict."</div>
     <div class="photo-break-attr">LandIQ — Indian Land Investment Advisor</div>
   </div>
 </div>
-<section class="trust-section">
+<section class="trust-section topo dark">
   <div class="section-inner">
     <div class="eyebrow reveal" style="color:rgba(236,210,138,.7)">Why Trust LandIQ</div>
     <div class="section-title reveal reveal-d1" style="color:var(--white)">Every recommendation<br/>is traceable and explained.</div>
@@ -488,7 +514,7 @@
     </div>
   </div>
 </section>
-<section class="output-section">
+<section class="output-section topo">
   <div class="section-inner">
     <div class="eyebrow reveal">Sample Output</div>
     <div class="section-title reveal reveal-d1">What a real analysis looks like.</div>
@@ -504,7 +530,7 @@
     </div>
   </div>
 </section>
-<section class="agents-section" id="agents">
+<section class="agents-section topo" id="agents">
   <div class="section-inner">
     <div class="agents-header">
       <div class="reveal"><div class="eyebrow">Specialist Agents</div><div class="section-title">Eight experts.<br/>One verdict.</div></div>
@@ -522,7 +548,7 @@
     </div>
   </div>
 </section>
-<section class="form-section" id="mainForm">
+<section class="form-section topo" id="mainForm">
   <div class="section-inner">
     <div class="eyebrow reveal">Free Analysis</div>
     <div class="section-title reveal reveal-d1" style="margin-bottom:8px">Analyse your land.</div>
@@ -758,10 +784,37 @@ document.querySelectorAll('.counter').forEach(el=>cObs.observe(el));
 
 (function(){const layers=document.querySelectorAll('.olayer');if(!layers.length)return;let i=0;setInterval(()=>{layers.forEach(l=>l.classList.remove('glow'));layers[i].classList.add('glow');i=(i+1)%layers.length;},1500);})();
 
+// ── Scroll parallax on the big background photos (hero, CTA, photo-break) ──
+// Each background image drifts slower than the page scroll, layering it
+// behind the fixed-position gradient/content. Off entirely for users who
+// asked for reduced motion.
+(function(){
+  if(window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+  const layers=[...document.querySelectorAll('.hero-img,.cta-bg,.photo-break-img')].map(el=>({
+    el, speed:0.18, section:el.closest('.hero,.cta-section,.photo-break')
+  }));
+  if(!layers.length)return;
+  let ticking=false;
+  function apply(){
+    const vh=window.innerHeight;
+    layers.forEach(({el,speed,section})=>{
+      if(!section)return;
+      const r=section.getBoundingClientRect();
+      if(r.bottom<0||r.top>vh)return; // off-screen, skip
+      const centerOffset=(r.top+r.height/2)-vh/2;
+      el.style.transform=`translateY(${(-centerOffset*speed).toFixed(1)}px)`;
+    });
+    ticking=false;
+  }
+  window.addEventListener('scroll',()=>{if(!ticking){requestAnimationFrame(apply);ticking=true;}},{passive:true});
+  window.addEventListener('resize',apply);
+  apply();
+})();
+
 const mObs=new IntersectionObserver((entries)=>{entries.forEach(e=>{if(e.isIntersecting)e.target.querySelectorAll('.metric-fill').forEach(f=>{f.style.width=f.dataset.w+'%';});});},{threshold:.3});
 document.querySelectorAll('.accuracy-metrics').forEach(el=>mObs.observe(el));
 
-(async()=>{try{const r=await fetch('/agents');const d=await r.json();const dyn=(d.agents||[]).filter(a=>!CORE.has(a.name));const total=8+dyn.length;document.getElementById('heroCount').textContent=total;const st=document.getElementById('heroStatAgents');st.dataset.target=total;}catch(e){}})();
+(async()=>{try{const r=await fetch('/agents');const d=await r.json();const dyn=(d.agents||[]).filter(a=>!CORE.has(a.name));const total=8+dyn.length;document.getElementById('heroCount').textContent=total;document.getElementById('stepAgentCount').textContent=total;const st=document.getElementById('heroStatAgents');st.dataset.target=total;const hca=document.getElementById('heroCardAgents');if(hca)hca.textContent=total;const hcm=document.getElementById('heroCardMore');if(hcm)hcm.textContent='+'+Math.max(total-3,0);}catch(e){}})();
 
 function goStep(n){
   document.querySelectorAll('.step-pane').forEach((p,i)=>p.classList.toggle('active',i+1===n));
