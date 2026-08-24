@@ -381,6 +381,24 @@ def run_dynamic_advisor(user_inputs):
         state["rag_context"] = "No context available."
         print("  [1/3] RAG failed: %s" % str(e)[:60])
 
+    # ── 1/3b: PixelRAG visual RAG (additive, dual-path) ────────────────
+    # Same query, but retrieved as screenshot tiles instead of parsed text.
+    # If PixelRAG's serve process is offline or the index hasn't been built
+    # yet, search() returns None and state simply has no visual_evidence —
+    # every other agent runs exactly as before. Only agents whose AGENT.md
+    # sets accepts_images: true (see agents_registry/visual_document/) act
+    # on this key at all.
+    try:
+        from src.utils.pixelrag_bridge import search as _pixelrag_search
+        visual_hits = _pixelrag_search(q, n_docs=3, include_images=True)
+        if visual_hits:
+            state["visual_evidence"] = visual_hits
+            print("  [1/3] PixelRAG: %d visual hit(s)" % len(visual_hits))
+        else:
+            print("  [1/3] PixelRAG: no hits / offline — text RAG only")
+    except Exception as e:
+        print("  [1/3] PixelRAG skipped: %s" % str(e)[:60])
+
     # ── 2/3: Planning (ALWAYS local) ─────────────────────────────────
     print("\n  [2/3] Planning...")
     plan = plan_execution(user_inputs)

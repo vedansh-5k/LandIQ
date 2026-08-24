@@ -129,6 +129,10 @@ def _load_agent(name):
         "role_text":    role_body,
         "skill_steps":  skill_body,
         "output_fields": output_fields,
+        # Any agent's AGENT.md can opt into multimodal input by setting this
+        # flag — it is never checked by agent name, so adding a second
+        # image-reading agent later needs zero code changes here.
+        "accepts_images": str(meta.get("accepts_images", "false")).strip().lower() == "true",
     }
 
 
@@ -334,13 +338,18 @@ def _extract_text(raw):
 
 
 def _gemini_invoke(system_prompt, human_prompt, temperature):
-    """Fast fallback when Groq is rate-limited (429) or its daily quota is spent."""
+    """Fast fallback when Groq is rate-limited (429) or its daily quota is spent.
+    Also the fallback for the multimodal path itself when the primary Gemini
+    call errors (e.g. a transient 503) — human_prompt may be a list of
+    text+image content blocks in that case, which needs the same higher
+    output cap as the primary multimodal call to avoid truncated JSON."""
     from langchain_google_genai import ChatGoogleGenerativeAI
+    out_cap = 2048 if isinstance(human_prompt, list) else MAX_OUT_TOKENS
     g = ChatGoogleGenerativeAI(
         google_api_key=os.environ.get("GOOGLE_API_KEY", ""),
         model=os.environ.get("GEMINI_MODEL", "gemini-flash-latest"),
         temperature=temperature,
-        max_output_tokens=MAX_OUT_TOKENS,
+        max_output_tokens=out_cap,
     )
     return g.invoke([("system", system_prompt), ("human", human_prompt)])
 
@@ -415,6 +424,45 @@ def run_dynamic_agent(agent_name, state):
             logger.warning("[%s] llm_model_override '%s' failed: %s", agent_name, llm_override, str(e)[:100])
             llm = None
 
+    # ── Multimodal read path — only agents whose AGENT.md sets
+    # accepts_images: true, and only when this run actually received
+    # visual_evidence (tiles retrieved by PixelRAG), get routed to a
+    # vision-capable model with the retrieved images attached. Groq's
+    # Llama 3.3 70B is text-only, so this deliberately bypasses it for
+    # this one call — every other agent's path is untouched.
+    human_payload = human_prompt
+    visual_hits = state.get("visual_evidence") or []
+    if agent.get("accepts_images") and visual_hits and os.environ.get("GOOGLE_API_KEY"):
+        image_parts = []
+        for hit in visual_hits[:3]:
+            b64 = hit.get("image_base64") if isinstance(hit, dict) else None
+            if b64:
+                image_parts.append({
+                    "type": "image_url",
+                    "image_url": "data:image/png;base64,%s" % b64,
+                })
+        if image_parts:
+            try:
+                from langchain_google_genai import ChatGoogleGenerativeAI
+                llm = ChatGoogleGenerativeAI(
+                    google_api_key=os.environ["GOOGLE_API_KEY"],
+                    model=os.environ.get("GEMINI_MODEL", "gemini-flash-latest"),
+                    temperature=agent["temperature"],
+                    # Multimodal answers (describing an image across several
+                    # JSON fields) run past MAX_OUT_TOKENS and get cut off
+                    # mid-JSON. This path always calls Gemini, never Groq, so
+                    # raising it here doesn't touch the Groq TPM budget
+                    # MAX_OUT_TOKENS was tuned for.
+                    max_output_tokens=2048,
+                )
+                human_payload = [{"type": "text", "text": human_prompt}] + image_parts
+                print("  [%s] multimodal: %d image(s) attached from visual_evidence"
+                      % (agent_name, len(image_parts)))
+            except Exception as e:
+                logger.warning("[%s] multimodal setup failed, falling back to text: %s",
+                                agent_name, str(e)[:100])
+                human_payload = human_prompt
+
     # Get primary LLM (RouterChatModel via factory, or direct Groq) if no override applied
     if llm is None:
         try:
@@ -454,11 +502,19 @@ def run_dynamic_agent(agent_name, state):
         # ★ Retry up to 3 times with exponential backoff for rate-limit errors
         for attempt in range(3):
             try:
-                try:
-                    bound = llm.bind(max_tokens=MAX_OUT_TOKENS)
-                except Exception:
+                # ChatGoogleGenerativeAI already takes max_output_tokens at
+                # construction and rejects a bind-time "max_tokens" kwarg
+                # (raises inside GenerateContentConfig, not at .bind() time,
+                # so a bare try/except around .bind() doesn't catch it) —
+                # skip the bind for it instead of paying a failed call.
+                if "google" in _cls or "gemini" in _cls:
                     bound = llm
-                raw = bound.invoke([("system", system_prompt), ("human", human_prompt)])
+                else:
+                    try:
+                        bound = llm.bind(max_tokens=MAX_OUT_TOKENS)
+                    except Exception:
+                        bound = llm
+                raw = bound.invoke([("system", system_prompt), ("human", human_payload)])
                 break  # success → exit retry loop
             except Exception as e:
                 primary_err = str(e)
@@ -475,7 +531,7 @@ def run_dynamic_agent(agent_name, state):
     if raw is None:
         if os.environ.get("GOOGLE_API_KEY"):
             try:
-                raw = _gemini_invoke(system_prompt, human_prompt, agent["temperature"])
+                raw = _gemini_invoke(system_prompt, human_payload, agent["temperature"])
                 provider = "gemini"
                 print("  [FALLBACK] %s -> Gemini flash (primary unavailable)" % agent_name)
             except Exception as e:

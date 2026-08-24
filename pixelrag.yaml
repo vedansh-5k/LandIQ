@@ -1,0 +1,19 @@
+# pixelrag.yaml — LandIQ visual RAG config
+#
+# Points PixelRAG at the SAME PDF folder the existing text RAG already uses
+# (src/rag/loader.py -> data/sample_reports/). Same knowledge base, now also
+# indexed as screenshots so tables/maps/layout survive retrieval.
+#
+# Nothing here is a Python literal — every value is editable in this file,
+# not hardcoded in code. Change `embed.device` to `cuda` if you later run
+# this on a machine with more VRAM than the 4GB RTX 2050 this was built on.
+
+source:
+  type: local
+  path: ./data/sample_reports
+
+embed:
+  model: Qwen/Qwen3-VL-Embedding-2B
+  device: cpu
+
+output: ./pixelrag_index

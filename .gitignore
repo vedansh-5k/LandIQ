@@ -14,3 +14,20 @@ models/
 src/utils/configurator.db
 langflow_api_key.txt
 *.log
+
+# PixelRAG — isolated venv + built indexes are large/local, same treatment as venv_langflow
+venv_pixelrag/
+pixelrag_index/
+pixelrag_index_old_blurry/
+pixelrag_index_sirtest/
+pixelrag_index_sirtest2/
+pixelrag_build.log
+poppler/
+
+# PixelRAG source PDFs/images — regenerable from the documented indexing pipeline,
+# not code, kept out of git to keep the repo lean
+data/pixelrag_demo_sources/
+data/pixelrag_sir_test_source/
+
+# manual pre-redesign snapshot, not meant to be versioned
+frontend/index.html.bak_pre_redesign_20260812_224812

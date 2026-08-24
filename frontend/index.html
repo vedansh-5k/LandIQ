@@ -15,6 +15,7 @@
     .reveal.in{opacity:1;transform:none;}
     .reveal-d1{transition-delay:.12s;}.reveal-d2{transition-delay:.24s;}.reveal-d3{transition-delay:.36s;}
     @media(prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none;transition:none;}*{animation-duration:.01ms!important;animation-iteration-count:1!important;}}
+    .scroll-progress{position:fixed;top:0;left:0;height:2.5px;width:0%;background:linear-gradient(90deg,var(--sage),var(--gold));z-index:210;transition:width .1s linear;box-shadow:0 0 8px rgba(201,162,75,.5);}
     nav{position:fixed;top:0;left:0;right:0;z-index:200;padding:0 48px;height:68px;display:flex;align-items:center;justify-content:space-between;background:rgba(8,18,9,.7);backdrop-filter:blur(20px) saturate(1.4);border-bottom:1px solid rgba(236,210,138,.1);transition:background .3s;}
     .nav-logo{font-family:'Cormorant Garamond',serif;font-size:27px;font-weight:600;color:var(--white);letter-spacing:-.5px;}
     .nav-logo span{color:var(--gold);}
@@ -62,6 +63,8 @@
     .hlc-chip{font-size:10px;font-weight:600;padding:5px 11px;border-radius:100px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:rgba(255,255,255,.68);}
     .hlc-chip.plus{background:rgba(201,162,75,.16);border-color:rgba(236,210,138,.35);color:var(--gold-lt);}
     @media(max-width:1080px){.hero-live-card{display:none;}}
+    .hlc-tilt{transform-style:preserve-3d;transition:transform .25s cubic-bezier(.16,1,.3,1);will-change:transform;}
+    @media(hover:none){.hlc-tilt{transition:none;}}
     .stats-bar{background:var(--forest);border-bottom:1px solid rgba(236,210,138,.08);padding:0 48px;}
     .stats-inner{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr);}
     .stat-cell{padding:34px 24px;text-align:center;border-right:1px solid rgba(236,210,138,.08);position:relative;overflow:hidden;}
@@ -392,6 +395,7 @@
   </style>
 </head>
 <body>
+<div class="scroll-progress" id="scrollProgress"></div>
 <nav>
   <div class="nav-logo">Land<span>IQ</span></div>
   <div class="nav-links">
@@ -400,6 +404,7 @@
     <a href="#accuracy" class="nav-link">Accuracy</a>
     <a href="#agents" class="nav-link">Agents</a>
     <a href="/static/llm-setup.html" class="nav-link">LLM Config</a>
+    <a href="/static/pixelrag.html" class="nav-link">Visual Search</a>
   </div>
   <button class="nav-cta" onclick="document.getElementById('mainForm').scrollIntoView({behavior:'smooth'})">Analyse My Land →</button>
 </nav>
@@ -414,12 +419,14 @@
       <button class="btn-hero-ghost" onclick="document.getElementById('orch').scrollIntoView({behavior:'smooth'})">Watch the Orchestrator</button>
     </div>
   </div>
-  <div class="hero-live-card">
-    <div class="hlc-top"><span class="hlc-dot"></span>Live Orchestrator</div>
-    <div class="hlc-row"><span class="hlc-k">Agents Running</span><span class="hlc-v" id="heroCardAgents">10</span></div>
-    <div class="hlc-row"><span class="hlc-k">Plan Source</span><span class="hlc-v">LLM</span></div>
-    <div class="hlc-row"><span class="hlc-k">Verdict Time</span><span class="hlc-v">&lt;30s</span></div>
-    <div class="hlc-agents"><span class="hlc-chip">Legal</span><span class="hlc-chip">Financial</span><span class="hlc-chip">Market</span><span class="hlc-chip plus" id="heroCardMore">+7</span></div>
+  <div class="hero-live-card" id="heroLiveCard">
+    <div class="hlc-tilt" id="hlcTilt">
+      <div class="hlc-top"><span class="hlc-dot"></span>Live Orchestrator</div>
+      <div class="hlc-row"><span class="hlc-k">Agents Running</span><span class="hlc-v" id="heroCardAgents">10</span></div>
+      <div class="hlc-row"><span class="hlc-k">Plan Source</span><span class="hlc-v">LLM</span></div>
+      <div class="hlc-row"><span class="hlc-k">Verdict Time</span><span class="hlc-v">&lt;30s</span></div>
+      <div class="hlc-agents"><span class="hlc-chip">Legal</span><span class="hlc-chip">Financial</span><span class="hlc-chip">Market</span><span class="hlc-chip plus" id="heroCardMore">+7</span></div>
+    </div>
   </div>
   <div class="hero-scroll">Scroll</div>
 </section>
@@ -548,6 +555,14 @@
     </div>
   </div>
 </section>
+<div class="photo-break">
+  <div class="photo-break-img" style="background-image:url('https://images.unsplash.com/photo-1512918728675-ed5a9ecdebfd?w=1700&q=80')"></div>
+  <div class="photo-break-overlay"></div>
+  <div class="photo-break-content reveal">
+    <div class="photo-break-quote">"Every plot of land tells two stories — the one the seller tells you, and the one the documents actually say. LandIQ reads the second one."</div>
+    <div class="photo-break-attr">LandIQ — Indian Land Investment Advisor</div>
+  </div>
+</div>
 <section class="form-section topo" id="mainForm">
   <div class="section-inner">
     <div class="eyebrow reveal">Free Analysis</div>
@@ -809,6 +824,35 @@ document.querySelectorAll('.counter').forEach(el=>cObs.observe(el));
   window.addEventListener('scroll',()=>{if(!ticking){requestAnimationFrame(apply);ticking=true;}},{passive:true});
   window.addEventListener('resize',apply);
   apply();
+})();
+
+// ── Scroll progress bar ──────────────────────────────────────────────────
+(function(){
+  const bar=document.getElementById('scrollProgress');
+  if(!bar)return;
+  function update(){
+    const h=document.documentElement;
+    const scrolled=h.scrollTop;
+    const max=h.scrollHeight-h.clientHeight;
+    bar.style.width=(max>0?(scrolled/max*100):0)+'%';
+  }
+  window.addEventListener('scroll',update,{passive:true});
+  window.addEventListener('resize',update);
+  update();
+})();
+
+// ── Cursor-tilt on the hero live-stats card ──────────────────────────────
+(function(){
+  if(window.matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+  if(window.matchMedia('(hover: none)').matches)return; // skip on touch devices
+  const card=document.getElementById('heroLiveCard'),tilt=document.getElementById('hlcTilt');
+  if(!card||!tilt)return;
+  card.addEventListener('mousemove',(e)=>{
+    const r=card.getBoundingClientRect();
+    const px=(e.clientX-r.left)/r.width-0.5, py=(e.clientY-r.top)/r.height-0.5;
+    tilt.style.transform=`perspective(600px) rotateY(${(px*10).toFixed(2)}deg) rotateX(${(-py*10).toFixed(2)}deg)`;
+  });
+  card.addEventListener('mouseleave',()=>{tilt.style.transform='perspective(600px) rotateY(0deg) rotateX(0deg)';});
 })();
 
 const mObs=new IntersectionObserver((entries)=>{entries.forEach(e=>{if(e.isIntersecting)e.target.querySelectorAll('.metric-fill').forEach(f=>{f.style.width=f.dataset.w+'%';});});},{threshold:.3});

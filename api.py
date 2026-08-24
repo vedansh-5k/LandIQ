@@ -1639,6 +1639,699 @@ async def rag_context(request: Request):
     return {"context": context}
 
 
+# ══════════════════════════════════════════════════════
+#  PIXELRAG INTEGRATION — visual RAG over screenshot tiles
+#  Dual-path, same shape as the Langflow block above: PixelRAG runs as a
+#  separate process (own venv, own port — see src/utils/pixelrag_bridge.py),
+#  and every endpoint here degrades gracefully if it's offline or the
+#  index hasn't been built yet. Nothing else in api.py depends on this.
+# ══════════════════════════════════════════════════════
+
+_PIXELRAG_BUILD_LOG = _Path("pixelrag_build.log")
+_PIXELRAG_BUILD_PROC = {"proc": None}
+
+
+@app.get("/pixelrag/status")
+def pixelrag_status():
+    """Mirrors /langflow/status's shape — online/base_url/mode."""
+    try:
+        from src.utils.pixelrag_bridge import status as _pixelrag_status
+        return _pixelrag_status()
+    except Exception as e:
+        return {"online": False, "index_built": False, "mode": "text_rag_only", "error": str(e)[:200]}
+
+
+@app.post("/pixelrag/search")
+async def pixelrag_search_endpoint(request: Request):
+    """Manual visual-search query — lets the demo show a live PixelRAG hit
+    without running a full property analysis."""
+    body = await request.json()
+    query = body.get("query", "")
+    n_docs = int(body.get("n_docs", 4))
+    include_images = bool(body.get("include_images", True))
+    if not query:
+        raise HTTPException(status_code=400, detail="query is required")
+    from src.utils.pixelrag_bridge import search as _pixelrag_search
+    hits = _pixelrag_search(query, n_docs=n_docs, include_images=include_images)
+    if hits is None:
+        return {"success": False, "hits": [], "note": "PixelRAG offline or index not built yet — see /pixelrag/status"}
+    return {"success": True, "count": len(hits), "hits": hits}
+
+
+def _vision_read_text(image_base64_list, prompt_text, max_tokens=1024, timeout_seconds=None, require_json=False, require_keys=None):
+    """Shared reading step: send a prompt + one or more images to a
+    vision-capable model and get text back. Tries Cloudflare (Llama-3.2-11B-
+    Vision-Instruct) first, then Gemini, then a chain of free OpenAI-
+    compatible vision models (OpenRouter) as backups — used by both
+    /pixelrag/ask (short answers) and /pixelrag/extract (full structured
+    extraction). Returns (text_or_None, reader_used, errors).
+
+    timeout_seconds scales with max_tokens by default — a long exhaustive
+    JSON extraction genuinely needs more generation time than a short
+    answer, not just more retries, so a fixed short timeout would cut off
+    legitimate (if slow) responses rather than catch real hangs.
+
+    require_json=True (used by /pixelrag/extract, which has a hard
+    requirement to produce clean machine-readable JSON) rejects a
+    provider's response if it doesn't actually parse as JSON, so the next
+    provider in the chain gets tried instead of silently accepting prose —
+    not every vision model follows a "JSON only" instruction reliably.
+
+    require_keys (only meaningful with require_json=True) additionally
+    rejects a response whose top-level object is missing any of these
+    keys — used by /pixelrag/extract to require ["document_title",
+    "sections"] specifically. Needed because a truncated generation (model
+    cut off mid-way through a long document) leaves unbalanced JSON overall,
+    and the embedded-JSON rescue below can then latch onto just one small,
+    individually-complete fragment — e.g. a single section object — instead
+    of failing loudly; confirmed live, a document that should have had 4
+    sections came back with only 1 because of exactly this. Checking for
+    the real top-level shape catches that instead of silently accepting a
+    fragment as if it were the whole answer.
+    """
+    if timeout_seconds is None:
+        timeout_seconds = max(30, min(90, max_tokens // 40))
+    image_parts = [
+        {"type": "image_url", "image_url": "data:image/png;base64,%s" % b64}
+        for b64 in image_base64_list if b64
+    ]
+    if not image_parts:
+        return None, None, ["no image data provided"]
+
+    multimodal_message = [("human", [{"type": "text", "text": prompt_text}] + image_parts)]
+
+    def _stitch_chunk_images(b64_list):
+        """Combine multiple base64 PNG chunks into one image that preserves
+        the original page layout. PixelRAG may split a page into side-by-
+        side columns (chunks share the same height, different widths) or
+        top/bottom bands (chunks share the same width, different heights) —
+        confirmed live that a real document here was split into columns,
+        not bands, so stacking chunks vertically put the right column
+        underneath the left one instead of beside it, scrambling the page.
+        Orientation is therefore detected from each chunk's actual pixel
+        dimensions rather than assumed. This exists because Cloudflare's
+        Llama endpoint only accepts one image per request; sending just the
+        single top-scoring chunk silently hides whatever the rest of the
+        document contains, and the model then confidently describes only
+        what it actually saw instead of what was actually asked about
+        (confirmed live on a real question). Stitching first means Llama
+        sees the whole document in one image, satisfying the one-image
+        limit without losing anything."""
+        import base64 as _b64, io as _io
+        from PIL import Image
+        imgs = []
+        for b64 in b64_list:
+            if not b64:
+                continue
+            imgs.append(Image.open(_io.BytesIO(_b64.b64decode(b64))).convert("RGB"))
+        if not imgs:
+            return None
+        if len(imgs) == 1:
+            out = _io.BytesIO()
+            imgs[0].save(out, format="PNG")
+            return _b64.b64encode(out.getvalue()).decode()
+
+        heights = [im.height for im in imgs]
+        widths = [im.width for im in imgs]
+        same_height = (max(heights) - min(heights)) <= max(heights) * 0.05
+        same_width = (max(widths) - min(widths)) <= max(widths) * 0.05
+        # Side-by-side (columns) when heights line up; stacked (bands) when
+        # widths line up instead; default to stacked if neither is a clean
+        # match (most common failure mode is a band split anyway).
+        stitch_horizontal = same_height and not same_width
+
+        if stitch_horizontal:
+            total_width = sum(widths)
+            height = max(heights)
+            combined = Image.new("RGB", (total_width, height), "white")
+            x = 0
+            for im in imgs:
+                combined.paste(im, (x, 0))
+                x += im.width
+        else:
+            width = max(widths)
+            total_height = sum(heights)
+            combined = Image.new("RGB", (width, total_height), "white")
+            y = 0
+            for im in imgs:
+                combined.paste(im, (0, y))
+                y += im.height
+
+        out = _io.BytesIO()
+        combined.save(out, format="PNG")
+        return _b64.b64encode(out.getvalue()).decode()
+
+    def _extract_text(raw):
+        content = raw.content
+        if isinstance(content, list):
+            return "".join(p.get("text", "") for p in content if isinstance(p, dict))
+        return str(content)
+
+    def _extract_embedded_json(text):
+        """Scan for every balanced {...} or [...] substring anywhere in
+        text, honoring quoted strings so braces/brackets inside them don't
+        miscount depth, and return the LONGEST one that parses as valid
+        JSON. Some models (Llama in particular) write a real, correct JSON
+        answer but wrap it in a sentence or two of explanation despite
+        being told not to — this recovers the JSON they actually got right
+        instead of discarding the whole response over the surrounding text.
+        Preferring the longest match (rather than the first found) matters
+        because a genuinely truncated response — cut off mid-document, so
+        the outer object never closes — can still contain one small,
+        individually-complete nested fragment (e.g. just the first section
+        of a multi-section document); grabbing the first match found would
+        silently accept that fragment as if it were the whole answer.
+        Returns None if no balanced, parseable JSON substring is found."""
+        best = None
+        i = 0
+        n = len(text)
+        while i < n:
+            ch = text[i]
+            if ch not in "{[":
+                i += 1
+                continue
+            opener, closer = ch, ("}" if ch == "{" else "]")
+            depth = 0
+            in_string = False
+            escape = False
+            for j in range(i, n):
+                c = text[j]
+                if in_string:
+                    if escape:
+                        escape = False
+                    elif c == "\\":
+                        escape = True
+                    elif c == '"':
+                        in_string = False
+                    continue
+                if c == '"':
+                    in_string = True
+                elif c == opener:
+                    depth += 1
+                elif c == closer:
+                    depth -= 1
+                    if depth == 0:
+                        candidate = text[i:j + 1]
+                        try:
+                            _json.loads(candidate)
+                            if best is None or len(candidate) > len(best):
+                                best = candidate
+                        except _json.JSONDecodeError:
+                            pass
+                        break
+            i += 1
+        return best
+
+    def _has_orphaned_graph_nodes(obj):
+        """Recursively look for any {"nodes":[...], "edges":[...]} structure
+        (the shape the extraction prompt asks for on org charts/flowcharts)
+        and check whether every node is referenced by at least one edge.
+        Confirmed live: smaller vision models can correctly list every node
+        in a diagram while still under-counting the arrows connecting them,
+        producing internally-inconsistent JSON that's technically valid but
+        factually incomplete (a node with zero connections when the diagram
+        clearly shows one). That's worth treating as a quality failure so a
+        stronger fallback provider gets a chance instead of silently
+        accepting a broken graph.
+
+        This intentionally does NOT try to verify that individual arrows
+        point at the exact right box — tested live and confirmed that's a
+        genuine accuracy ceiling of the free 11B model on complex multi-
+        branch diagrams specifically, not something catchable with a
+        generic structural rule (every rule tried here caught one wrong
+        shape only for the model to produce a different wrong shape next
+        time). By explicit choice, that risk is accepted in exchange for
+        staying on Llama for this content rather than bouncing to a
+        different model over it."""
+        def node_text(n):
+            if isinstance(n, dict):
+                return " ".join(str(v) for v in n.values() if isinstance(v, str))
+            return str(n)
+
+        def edge_refs(e):
+            if isinstance(e, dict):
+                return [str(e[k]) for k in ("from", "to", "source", "target") if e.get(k)]
+            return []
+
+        def walk(o):
+            if isinstance(o, dict):
+                nodes, edges = o.get("nodes"), o.get("edges")
+                if isinstance(nodes, list) and isinstance(edges, list) and len(nodes) > 1 and edges:
+                    all_edge_text = " ".join(ref for e in edges for ref in edge_refs(e))
+                    for n in nodes:
+                        nt = node_text(n).strip()
+                        if nt and nt not in all_edge_text:
+                            return True
+                for v in o.values():
+                    if walk(v):
+                        return True
+            elif isinstance(o, list):
+                for item in o:
+                    if walk(item):
+                        return True
+            return False
+
+        return walk(obj)
+
+    def _check_candidate(candidate):
+        """Validates the candidate against the shared quality bar (non-empty,
+        and — when JSON was required — actually contains valid, structurally
+        complete JSON, even if wrapped in explanation text). Returns the
+        text that should actually be used as the answer (which may be a
+        cleaned/extracted subset of the raw candidate), or raises if nothing
+        usable was produced."""
+        if len(candidate) < 2:
+            raise ValueError("model returned an empty response")
+        if not require_json:
+            return candidate
+        stripped = candidate.strip()
+        if stripped.startswith("```"):
+            stripped = stripped.split("```")[1]
+            if stripped.startswith("json"):
+                stripped = stripped[4:]
+            stripped = stripped.strip()
+        parsed = None
+        result_text = None
+        try:
+            parsed = _json.loads(stripped)
+            result_text = stripped
+        except _json.JSONDecodeError:
+            embedded = _extract_embedded_json(candidate)
+            if embedded is not None:
+                parsed = _json.loads(embedded)
+                result_text = embedded
+        if result_text is None:
+            raise ValueError("response did not contain valid JSON")
+        if require_keys:
+            if not isinstance(parsed, dict):
+                raise ValueError("expected a JSON object with fields %s, got something else" % require_keys)
+            for k in require_keys:
+                if k not in parsed:
+                    raise ValueError("response is missing expected field %r — likely a truncated or partial answer" % k)
+                if isinstance(parsed[k], list) and len(parsed[k]) == 0:
+                    raise ValueError("required field %r is empty — likely a truncated or partial answer" % k)
+        # Diagram-wiring completeness (_has_orphaned_graph_nodes) is
+        # intentionally not enforced here — by explicit choice, occasional
+        # imperfect arrow-tracing in complex diagrams is accepted in
+        # exchange for staying on Llama consistently (forcing that check
+        # caused frequent, slow cascades through the entire fallback chain
+        # just to fix a wiring detail that's still not fully guaranteed to
+        # be correct even after cascading).
+        return result_text
+
+    answer_text = None
+    reader_used = None
+    errors = []
+
+    # Primary: Llama-3.2-11B-Vision-Instruct via Cloudflare Workers AI
+    # (sir's requested model, free tier, no third-party paid service).
+    # Called directly via httpx rather than through an OpenAI-compatible
+    # wrapper — Cloudflare's OpenAI-compat endpoint strictly validates the
+    # image_url field as a nested {"url": ...} object and rejects the raw
+    # string format used elsewhere in this function, so its native
+    # /ai/run/<model> endpoint (which accepts that nested object) is used
+    # instead. Account ID, token and model name all come from env vars —
+    # nothing here is hardcoded.
+    #
+    # Confirmed live: this model only accepts a single image per request —
+    # sending 2+ separate image_url parts makes Cloudflare itself 400 with
+    # an internal error. Rather than only send the single top-scoring chunk
+    # (which was silently hiding whatever half of a multi-chunk document
+    # that chunk didn't cover — confirmed live on a real question), all
+    # chunks are stitched into one combined image first, so Llama always
+    # sees the whole document while still only sending "one image".
+    if answer_text is None and os.environ.get("CLOUDFLARE_ACCOUNT_ID") and os.environ.get("CLOUDFLARE_API_TOKEN"):
+        try:
+            cf_account = os.environ["CLOUDFLARE_ACCOUNT_ID"]
+            cf_token = os.environ["CLOUDFLARE_API_TOKEN"]
+            cf_model = os.environ.get("CLOUDFLARE_VISION_MODEL", "@cf/meta/llama-3.2-11b-vision-instruct")
+            cf_url = f"https://api.cloudflare.com/client/v4/accounts/{cf_account}/ai/run/{cf_model}"
+            stitched_b64 = _stitch_chunk_images(image_base64_list)
+            if stitched_b64 is None:
+                raise ValueError("no image data available to stitch")
+            cf_content = [{"type": "text", "text": prompt_text}] + [
+                {"type": "image_url", "image_url": {"url": "data:image/png;base64,%s" % stitched_b64}}
+            ]
+            with httpx.Client(timeout=timeout_seconds) as client:
+                resp = client.post(
+                    cf_url,
+                    headers={"Authorization": f"Bearer {cf_token}", "Content-Type": "application/json"},
+                    json={"messages": [{"role": "user", "content": cf_content}], "max_tokens": max_tokens},
+                )
+            resp.raise_for_status()
+            payload = resp.json()
+            if not payload.get("success"):
+                raise ValueError(str(payload.get("errors"))[:150])
+            raw_response = (payload.get("result") or {}).get("response", "")
+            # Cloudflare sometimes hands back already-parsed JSON (a dict/
+            # list, not a string) when the model's output was clean JSON —
+            # round-trip it through json.dumps so _check_candidate always
+            # receives a string, same as every other provider.
+            if isinstance(raw_response, (dict, list)):
+                candidate = _json.dumps(raw_response)
+            else:
+                candidate = str(raw_response).strip()
+            answer_text = _check_candidate(candidate)
+            reader_used = "cloudflare:llama-3.2-11b-vision-instruct"
+        except Exception as e:
+            errors.append("cloudflare: %s" % str(e)[:150])
+
+    # Fallback: Gemini (already configured for this project)
+    if answer_text is None and os.environ.get("GOOGLE_API_KEY"):
+        try:
+            from langchain_google_genai import ChatGoogleGenerativeAI
+            llm = ChatGoogleGenerativeAI(
+                google_api_key=os.environ["GOOGLE_API_KEY"],
+                model=os.environ.get("GEMINI_MODEL", "gemini-flash-latest"),
+                temperature=0.1,
+                max_output_tokens=max_tokens,
+                timeout=timeout_seconds,
+            )
+            candidate = _extract_text(llm.invoke(multimodal_message)).strip()
+            answer_text = _check_candidate(candidate)
+            reader_used = "gemini"
+        except Exception as e:
+            errors.append("gemini: %s" % str(e)[:150])
+
+    # Fallback: any OpenAI-compatible vision endpoint (e.g. OpenRouter's free
+    # vision models) — same dual-path shape as every other provider in this
+    # project. OPENROUTER_BASE_URL defaults to OpenRouter itself, but this
+    # works with any OpenAI-compatible vision API by changing the base URL.
+    if answer_text is None and os.environ.get("OPENROUTER_API_KEY"):
+        # Free-tier vision models on OpenRouter get individually rate-limited
+        # by shared global demand (unrelated to our own usage), so try a
+        # short chain of them — a 30s-capped attempt each — rather than
+        # betting the whole request on one. OPENROUTER_MODEL (if set) always
+        # goes first; these are just the backups.
+        # dots-studio/dots-3-note-preview:free was tried and dropped — it
+        # returns HTTP 200 with a genuinely empty body for image input
+        # (confirmed live), which is worse than an error since it looks
+        # like success unless explicitly checked for.
+        candidates = []
+        if os.environ.get("OPENROUTER_MODEL"):
+            candidates.append(os.environ["OPENROUTER_MODEL"])
+        # Ordered by what's actually been succeeding in real testing right
+        # now — gemma-4-26b has come through consistently; gemma-4-31b is
+        # currently rate-limited under the same shared-demand load as
+        # Gemini, so it's demoted rather than eating a wasted attempt first.
+        for m in ["google/gemma-4-26b-a4b-it:free", "google/gemma-4-31b-it:free",
+                  "nvidia/nemotron-nano-12b-v2-vl:free"]:
+            if m not in candidates:
+                candidates.append(m)
+
+        from langchain_openai import ChatOpenAI
+        for model_name in candidates:
+            try:
+                llm = ChatOpenAI(
+                    api_key=os.environ["OPENROUTER_API_KEY"],
+                    base_url=os.environ.get("OPENROUTER_BASE_URL", "https://openrouter.ai/api/v1"),
+                    model=model_name,
+                    temperature=0.1,
+                    max_tokens=max_tokens,
+                    timeout=timeout_seconds,
+                )
+                candidate = _extract_text(llm.invoke(multimodal_message)).strip()
+                answer_text = _check_candidate(candidate)
+                reader_used = "openrouter:%s" % model_name
+                break
+            except Exception as e:
+                errors.append("openrouter(%s): %s" % (model_name, str(e)[:100]))
+                continue
+
+    return answer_text, reader_used, errors
+
+
+@app.post("/pixelrag/ask")
+async def pixelrag_ask(request: Request):
+    """Retrieval + generation, one box for two kinds of request:
+    - A plain question ("what is the status of X") gets a short direct answer.
+    - An extraction request ("extract the artefact matrix as json") gets back
+      real, clean, valid JSON for exactly the part asked about — no markdown
+      fences, no wrapping text — accurate and ready to feed into a different
+      system's own RAG pipeline, the same standard /pixelrag/extract holds
+      itself to for the whole document.
+    Retrieval gathers every chunk of the single best-matching document (not
+    just the top few individually-ranked hits, which could span unrelated
+    documents) so the model always has full context to answer accurately or
+    to correctly scope a partial extraction, whichever was asked."""
+    body = await request.json()
+    question = (body.get("question") or "").strip()
+    n_docs = int(body.get("n_docs", 20))
+    if not question:
+        raise HTTPException(status_code=400, detail="question is required")
+
+    from src.utils.pixelrag_bridge import search as _pixelrag_search
+    # Off the event loop thread too — same blocking-server reason as the
+    # vision call below, just for the (usually faster, but still blocking)
+    # retrieval step that runs before it.
+    hits = await asyncio.to_thread(_pixelrag_search, question, n_docs=n_docs, include_images=True)
+    if not hits:
+        return {"success": False, "answer": None,
+                "note": "No visual evidence found — PixelRAG offline, index empty, or nothing relevant matched."}
+
+    # Same "whole document, not just the top hit" strategy as /pixelrag/extract
+    by_doc = {}
+    for h in hits:
+        by_doc.setdefault(h.get("url") or "unknown", []).append(h)
+    target_doc = max(by_doc, key=lambda k: max(x.get("score", 0) for x in by_doc[k]))
+    doc_hits = sorted(by_doc[target_doc], key=lambda h: (h.get("tile_index", 0), h.get("chunk_index", 0)))
+    best = max(doc_hits, key=lambda h: h.get("score", 0))
+
+    prompt_text = (
+        "You are given every screenshot piece of ONE document, together covering the whole page. "
+        "Read them using ONLY what is visibly shown — never guess, never use outside knowledge. "
+        "If something asked for is not visible, say so plainly instead of guessing.\n\n"
+        "The request: %s\n\n"
+        "Decide which of these two the request is, and respond accordingly:\n"
+        "1. A plain question — respond with ONLY the direct answer (a short, specific "
+        "value/label/number/sentence exactly as it appears in the image). No preamble.\n"
+        "2. A request to extract, export, or format something as JSON/structured data — "
+        "for the whole document OR for one specific named part (a specific table/chart/"
+        "section) — respond with ONLY clean, valid JSON representing exactly what was "
+        "asked, complete and accurate: tables as arrays of row objects using the real "
+        "column names, charts as objects with the real segment labels and values, etc. "
+        "No markdown code fences, no explanation, no extra text — the JSON must be "
+        "directly parseable as-is." % question
+    )
+    # Whether this specific request wants JSON back is decided per-question
+    # by the model itself (see prompt above) — but if it does, that output
+    # has to actually BE valid JSON to be usable, and not every provider
+    # (Llama-3.2-Vision on Cloudflare, in particular) reliably follows a
+    # "JSON only, no explanation" instruction. Detecting the same signal the
+    # UI's own suggested-question buttons use ("... as json") lets this
+    # request the same require_json compliance fallback /pixelrag/extract
+    # already relies on, without forcing plain-question answers through
+    # JSON validation they were never meant to satisfy.
+    wants_json = "json" in question.lower() or "structured data" in question.lower()
+    if wants_json:
+        # Smaller models (Llama-3.2-11B in particular) follow a concrete
+        # "start with { end with }" imperative far more reliably than a
+        # generic "respond with JSON" instruction — confirmed by direct
+        # testing. Only appended when JSON was actually requested, so plain
+        # questions aren't pushed toward JSON they were never meant to be.
+        prompt_text += (
+            "\n\nThe very first character of your reply must be { or [ and the very "
+            "last character must be } or ]. Do not write anything before or after it. "
+            "Begin your reply now with the JSON."
+        )
+    # Run off the event loop thread — _vision_read_text makes blocking HTTP
+    # calls (httpx.Client, langchain's synchronous .invoke()) that can take
+    # up to several minutes cascading through providers; calling it directly
+    # inside this async route would freeze the entire server (every other
+    # request, tab, and endpoint) for that whole time.
+    answer_text, reader_used, errors = await asyncio.to_thread(
+        _vision_read_text,
+        [h.get("image_base64") for h in doc_hits], prompt_text, max_tokens=2048, require_json=wants_json
+    )
+
+    if answer_text is None:
+        return {"success": False, "answer": None,
+                "note": "Reading step failed on all configured providers: %s" % " | ".join(errors)}
+
+    cleaned = answer_text.strip()
+    fenced = cleaned.startswith("```")
+    if fenced:
+        cleaned = cleaned.split("```")[1]
+        if cleaned.startswith("json"):
+            cleaned = cleaned[4:]
+        cleaned = cleaned.strip()
+
+    parsed_json = None
+    if cleaned.startswith("{") or cleaned.startswith("["):
+        try:
+            parsed_json = _json.loads(cleaned)
+        except _json.JSONDecodeError:
+            parsed_json = None
+
+    return {
+        "success": True,
+        "is_json": parsed_json is not None,
+        "answer": None if parsed_json is not None else answer_text.strip(),
+        "answer_json": parsed_json,
+        "source": {
+            "document": best.get("url"),
+            "tile_index": best.get("tile_index"),
+            "chunk_index": best.get("chunk_index"),
+            "score": best.get("score"),
+            "image_base64": best.get("image_base64"),
+        },
+        "chunks_considered": len(doc_hits),
+        "reader": reader_used,
+        "provider_attempts": errors,
+    }
+
+
+_EXTRACT_PROMPT = """You are given ALL the screenshot pieces of ONE document/image, split into chunks that together cover the entire original picture from top to bottom. Some content may repeat slightly at chunk boundaries — that is expected, do not duplicate it in your output.
+
+Your job: produce ONE complete, structured JSON description of the ENTIRE document — accurate to exactly what is visible, nothing invented, nothing skipped. This JSON will be fed into a separate system that will never see the image itself, so it must fully stand in for the image.
+
+Return ONLY valid JSON — no markdown code fences, no explanation before or after. Use this shape as a guide; adapt or add fields as needed to fully capture what is actually shown, but never omit anything visible:
+
+{
+  "document_title": "the main title/heading text, exactly as shown",
+  "document_subtitle": "any subtitle or descriptor text, exactly as shown",
+  "sections": [
+    {
+      "section_title": "the heading of this section/panel",
+      "section_type": "organization_chart | table | donut_chart | bar_chart | flowchart | text_block | other",
+      "position": "e.g. top-left, top-right, bottom, full-width",
+      "content": "fully structured content specific to this section's type — for a table: {\\"columns\\":[...],\\"rows\\":[{...}]} with every row and value; for an org chart: {\\"nodes\\":[...],\\"edges\\":[{\\"from\\":...,\\"to\\":...}]}; for a donut/pie/bar chart: {\\"total\\":N,\\"segments\\":[{\\"label\\":...,\\"value\\":...}]} with every segment; for a flowchart: {\\"steps\\":[{\\"number\\":N,\\"label\\":...,\\"description\\":...}]} in order",
+      "description": "a full plain-English description of exactly what this section shows and what it means"
+    }
+  ],
+  "all_visible_text": ["every distinct piece of text visible anywhere on the page, verbatim, as a flat list — so nothing is lost even if it did not fit a section above"],
+  "summary": "a complete plain-English paragraph describing the whole document — enough that someone who never sees the image understands everything it contains"
+}
+
+Be exhaustive: every row of every table, every segment of every chart, every label. If something is illegible, say so explicitly rather than guessing.
+
+The very first character of your reply must be { and the very last character must be }. Do not write any sentence, heading, or explanation before the opening { or after the closing }. Begin your reply now, starting with {"""
+
+
+@app.post("/pixelrag/extract")
+async def pixelrag_extract(request: Request):
+    """Full structured extraction: gathers every screenshot chunk belonging
+    to a document (not just the best-matching one, like /pixelrag/ask does),
+    hands them ALL to a vision model together, and asks for one complete,
+    machine-consumable JSON description of the entire image — title, every
+    chart/table/section in full detail, plus a verbatim text catch-all and a
+    plain-English summary. Meant to be copied out and fed into a *different*
+    system's own RAG pipeline, which will never see the image itself."""
+    body = await request.json()
+    query = (body.get("query") or "").strip() or "document overview content"
+    document_filter = (body.get("document") or "").strip().lower()
+    n_docs = int(body.get("n_docs", 50))
+
+    from src.utils.pixelrag_bridge import search as _pixelrag_search
+    # Off the event loop thread too — see the matching note in /pixelrag/ask.
+    hits = await asyncio.to_thread(_pixelrag_search, query, n_docs=n_docs, include_images=True)
+    if not hits:
+        return {"success": False, "extracted": None,
+                "note": "No visual evidence found — PixelRAG offline or index empty."}
+
+    if document_filter:
+        hits = [h for h in hits if document_filter in (h.get("url") or "").lower()]
+        if not hits:
+            return {"success": False, "extracted": None,
+                    "note": "No indexed chunks matched document filter '%s'." % document_filter}
+
+    # Group by source document, keep every distinct chunk per document —
+    # this is what makes it "the whole image", not just the top search hit.
+    by_doc = {}
+    for h in hits:
+        by_doc.setdefault(h.get("url") or "unknown", []).append(h)
+    if len(by_doc) > 1 and not document_filter:
+        # Multiple documents matched a broad query — extract only the
+        # most-represented one rather than silently merging unrelated
+        # documents into one JSON. Caller can pass `document` to be specific.
+        target_doc = max(by_doc, key=lambda k: len(by_doc[k]))
+        by_doc = {target_doc: by_doc[target_doc]}
+
+    doc_name = list(by_doc.keys())[0]
+    doc_hits = sorted(by_doc[doc_name], key=lambda h: (h.get("tile_index", 0), h.get("chunk_index", 0)))
+
+    # Off the event loop thread — see the matching note in /pixelrag/ask.
+    # This call is the slowest in the app (up to 6000 output tokens,
+    # potentially cascading through 4 providers), so it's the one most
+    # likely to freeze the whole server if left blocking the main thread.
+    # require_keys guards against a truncated generation being accepted as
+    # if it were the complete document (confirmed live: a response cut off
+    # mid-way once passed JSON validation with only 1 of 4 sections present).
+    extracted_text, reader_used, errors = await asyncio.to_thread(
+        _vision_read_text,
+        [h.get("image_base64") for h in doc_hits], _EXTRACT_PROMPT, max_tokens=6000, require_json=True,
+        require_keys=["document_title", "sections"]
+    )
+    if extracted_text is None:
+        return {"success": False, "extracted": None,
+                "note": "Reading step failed on all configured providers: %s" % " | ".join(errors)}
+
+    cleaned = extracted_text.strip()
+    if cleaned.startswith("```"):
+        cleaned = cleaned.split("```")[1]
+        if cleaned.startswith("json"):
+            cleaned = cleaned[4:]
+        cleaned = cleaned.strip()
+
+    try:
+        extracted_json = _json.loads(cleaned)
+        parsed_ok = True
+    except _json.JSONDecodeError:
+        extracted_json = {"raw_output": cleaned}
+        parsed_ok = False
+
+    return {
+        "success": True,
+        "document": doc_name,
+        "chunks_used": len(doc_hits),
+        "parsed_as_json": parsed_ok,
+        "extracted": extracted_json,
+        "reader": reader_used,
+        "provider_attempts": errors,
+    }
+
+
+@app.post("/pixelrag/build-index")
+def pixelrag_build_index():
+    """Kicks off `pixelrag index build` as a background subprocess inside
+    venv_pixelrag, so it can be triggered/shown live without blocking the
+    API. Poll /pixelrag/build-status for progress."""
+    proc = _PIXELRAG_BUILD_PROC["proc"]
+    if proc is not None and proc.poll() is None:
+        return {"success": False, "error": "a build is already running (pid %d)" % proc.pid}
+
+    venv_pixelrag_cli = _Path("venv_pixelrag") / "Scripts" / "pixelrag.exe"
+    if not venv_pixelrag_cli.exists():
+        return {"success": False, "error": "venv_pixelrag not set up yet — see pixelrag.yaml / setup docs"}
+
+    import subprocess
+    log_f = open(_PIXELRAG_BUILD_LOG, "w", encoding="utf-8")
+    new_proc = subprocess.Popen(
+        [str(venv_pixelrag_cli), "index", "build"],
+        cwd=str(_Path(".").resolve()),
+        stdout=log_f, stderr=subprocess.STDOUT,
+    )
+    _PIXELRAG_BUILD_PROC["proc"] = new_proc
+    return {"success": True, "pid": new_proc.pid, "log_file": str(_PIXELRAG_BUILD_LOG)}
+
+
+@app.get("/pixelrag/build-status")
+def pixelrag_build_status():
+    proc = _PIXELRAG_BUILD_PROC["proc"]
+    tail = ""
+    if _PIXELRAG_BUILD_LOG.exists():
+        try:
+            tail = _PIXELRAG_BUILD_LOG.read_text(encoding="utf-8", errors="ignore")[-2000:]
+        except Exception:
+            pass
+    if proc is None:
+        return {"running": False, "log_tail": tail}
+    running = proc.poll() is None
+    return {"running": running, "return_code": None if running else proc.returncode, "log_tail": tail}
+
+# ══════════════════════════════════════════════════════
+
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

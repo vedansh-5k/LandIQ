@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>LandIQ — Visual Document Search (PixelRAG)</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+  :root{--ink:#081209;--forest:#0e2415;--moss:#1a3a24;--sage:#2d6042;--leaf:#4a8c5c;--cream:#ddd2b8;--parch:#d0c3a0;--stone:#b7a67e;--gold:#c9a24b;--gold-lt:#ecd28a;--white:#ffffff;--muted:#5c5646;--red:#b03030;--green:#3a7a4e;}
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--cream);color:var(--ink);font-family:'Inter',sans-serif;min-height:100vh;}
+  a{color:inherit;}
+  nav{position:sticky;top:0;z-index:50;padding:0 40px;height:64px;display:flex;align-items:center;justify-content:space-between;background:var(--forest);border-bottom:1px solid rgba(236,210,138,.15);}
+  .nav-logo{font-family:'Cormorant Garamond',serif;font-size:23px;font-weight:600;color:var(--white);letter-spacing:-.3px;text-decoration:none;}
+  .nav-logo span{color:var(--gold);}
+  .nav-back{font-size:12px;color:rgba(255,255,255,.6);text-decoration:none;letter-spacing:.3px;display:flex;align-items:center;gap:6px;transition:color .2s;}
+  .nav-back:hover{color:var(--gold-lt);}
+
+  .wrap{max-width:1080px;margin:0 auto;padding:52px 32px 90px;}
+  .eyebrow{font-size:11px;font-weight:700;color:var(--sage);text-transform:uppercase;letter-spacing:2.2px;display:flex;align-items:center;gap:10px;}
+  .eyebrow::before{content:'';width:28px;height:1px;background:var(--gold);}
+  h1{font-family:'Cormorant Garamond',serif;font-weight:600;font-size:clamp(30px,4vw,44px);margin:10px 0 12px;letter-spacing:-.5px;}
+  .dek{color:var(--muted);max-width:66ch;font-size:15px;line-height:1.7;}
+
+  .status-bar{margin-top:28px;display:flex;flex-wrap:wrap;gap:1px;background:var(--stone);border:1px solid var(--stone);border-radius:12px;overflow:hidden;}
+  .status-cell{flex:1;min-width:160px;background:var(--white);padding:16px 20px;}
+  .status-cell .k{font-size:10px;text-transform:uppercase;letter-spacing:1.4px;color:var(--muted);display:flex;align-items:center;gap:6px;margin-bottom:6px;}
+  .status-cell .v{font-family:'JetBrains Mono',monospace;font-size:14px;color:var(--ink);}
+  .dot{width:8px;height:8px;border-radius:50%;flex:none;background:var(--stone);}
+  .dot.on{background:var(--green);box-shadow:0 0 0 3px rgba(58,122,78,.18);}
+  .dot.off{background:var(--red);box-shadow:0 0 0 3px rgba(176,48,48,.15);}
+
+  .search-row{margin-top:32px;display:flex;gap:10px;}
+  #q{flex:1;padding:15px 18px;border:1px solid var(--stone);border-radius:10px;background:var(--white);font-size:15px;font-family:'Inter',sans-serif;color:var(--ink);}
+  #q:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px rgba(201,162,75,.18);}
+  #go{background:var(--forest);color:var(--white);border:none;border-radius:10px;padding:0 30px;font-size:14px;font-weight:600;cursor:pointer;letter-spacing:.2px;transition:background .2s;}
+  #go:hover{background:var(--moss);}
+  #go:disabled{opacity:.5;cursor:wait;}
+  .presets{margin-top:12px;display:flex;flex-wrap:wrap;gap:8px;}
+  .preset{font-size:12px;color:var(--sage);background:rgba(45,96,66,.08);border:1px solid rgba(45,96,66,.2);border-radius:100px;padding:6px 14px;cursor:pointer;transition:all .15s;}
+  .preset:hover{background:rgba(45,96,66,.15);border-color:var(--sage);}
+
+  .msg{margin-top:28px;padding:16px 20px;border-radius:10px;font-size:13.5px;line-height:1.6;display:none;}
+  .msg.warn{background:#f5e2dd;color:#7a2f22;display:block;}
+  .msg.info{background:rgba(45,96,66,.08);color:var(--moss);display:block;}
+
+  .results{margin-top:28px;display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:18px;}
+  .hit{background:var(--white);border:1px solid var(--stone);border-radius:14px;overflow:hidden;transition:box-shadow .2s,transform .2s;}
+  .hit:hover{box-shadow:0 14px 36px rgba(14,36,21,.14);transform:translateY(-3px);}
+  .hit img{width:100%;display:block;background:var(--parch);aspect-ratio:16/10;object-fit:cover;object-position:top;}
+  .hit-body{padding:14px 16px 16px;}
+  .hit-score{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--gold);letter-spacing:.3px;margin-bottom:6px;}
+  .hit-doc{font-size:12.5px;color:var(--ink);font-weight:600;word-break:break-word;line-height:1.4;}
+  .hit-meta{font-size:11px;color:var(--muted);margin-top:5px;font-family:'JetBrains Mono',monospace;}
+
+  .empty{margin-top:60px;text-align:center;color:var(--muted);font-size:14px;}
+  .foot-note{margin-top:56px;padding-top:24px;border-top:1px solid var(--stone);color:var(--muted);font-size:12.5px;line-height:1.7;}
+  .foot-note code{font-family:'JetBrains Mono',monospace;background:rgba(0,0,0,.05);padding:1px 6px;border-radius:4px;}
+
+  .tabs{margin-top:32px;display:flex;gap:4px;background:var(--parch);border-radius:12px;padding:4px;width:fit-content;}
+  .tab{padding:10px 22px;border-radius:9px;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;border:none;background:transparent;font-family:'Inter',sans-serif;}
+  .tab.active{background:var(--white);color:var(--forest);box-shadow:0 2px 8px rgba(14,36,21,.1);}
+  .panel{display:none;}
+  .panel.active{display:block;}
+
+  .answer-card{margin-top:28px;background:var(--white);border:1px solid var(--stone);border-radius:16px;overflow:hidden;display:none;}
+  .answer-card.show{display:block;}
+  .answer-top{padding:24px 26px 20px;}
+  .answer-label{font-size:10px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:var(--sage);margin-bottom:10px;}
+  .answer-text{font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:600;color:var(--ink);line-height:1.4;}
+  .source-strip{background:var(--parch);padding:18px 26px;display:grid;grid-template-columns:180px 1fr;gap:18px;align-items:center;}
+  .source-strip img{width:100%;border-radius:8px;border:1px solid var(--stone);display:block;}
+  .source-meta .k{font-size:10px;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted);margin-bottom:3px;}
+  .source-meta .v{font-family:'JetBrains Mono',monospace;font-size:12.5px;color:var(--ink);margin-bottom:10px;word-break:break-word;}
+
+  .extract-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:8px;}
+  .extract-head p{color:var(--muted);font-size:13.5px;line-height:1.6;max-width:64ch;margin:0;}
+  #extractGo{background:var(--forest);color:var(--white);border:none;border-radius:10px;padding:13px 26px;font-size:14px;font-weight:600;cursor:pointer;letter-spacing:.2px;white-space:nowrap;}
+  #extractGo:hover{background:var(--moss);}
+  #extractGo:disabled{opacity:.5;cursor:wait;}
+  .json-card{margin-top:20px;background:var(--white);border:1px solid var(--stone);border-radius:14px;overflow:hidden;display:none;}
+  .json-card.show{display:block;}
+  .json-toolbar{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--stone);background:var(--parch);}
+  .json-toolbar .meta{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:var(--muted);}
+  .attempts-note{padding:10px 18px;font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.6;color:var(--muted);background:var(--parch);border-bottom:1px solid var(--stone);display:none;}
+  .attempts-note.show{display:block;}
+  #copyJson{background:var(--white);border:1px solid var(--stone);border-radius:8px;padding:7px 16px;font-size:12.5px;font-weight:600;cursor:pointer;color:var(--forest);}
+  #copyJson:hover{border-color:var(--gold);}
+  #jsonOut{margin:0;padding:20px;font-family:'JetBrains Mono',monospace;font-size:12.5px;line-height:1.65;color:var(--ink);white-space:pre-wrap;word-break:break-word;max-height:520px;overflow-y:auto;}
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="nav-logo" href="/static/index.html">Land<span>IQ</span></a>
+  <a class="nav-back" href="/static/index.html">&larr; Back to LandIQ</a>
+</nav>
+
+<div class="wrap">
+  <div class="eyebrow">Visual Document Search — PixelRAG</div>
+  <h1>Search your documents by how the page looks</h1>
+  <p class="dek">
+    This searches <code style="font-family:'JetBrains Mono',monospace">data/sample_reports/</code> as screenshots
+    instead of parsed text — the same PDFs your text search already uses, retrieved as images so tables, maps
+    and layout survive. Results below are read live from the running PixelRAG index; nothing here is staged.
+  </p>
+
+  <div class="status-bar" id="statusBar">
+    <div class="status-cell"><div class="k"><span class="dot" id="dotOnline"></span>Service</div><div class="v" id="stOnline">checking…</div></div>
+    <div class="status-cell"><div class="k">Vectors indexed</div><div class="v" id="stVectors">—</div></div>
+    <div class="status-cell"><div class="k">Model</div><div class="v" id="stModel">—</div></div>
+    <div class="status-cell"><div class="k">Endpoint</div><div class="v" id="stBase">—</div></div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" id="tabSearch">Search</button>
+    <button class="tab" id="tabAsk">Ask a question</button>
+    <button class="tab" id="tabExtract">Extract full JSON</button>
+  </div>
+
+  <div class="panel active" id="panelSearch">
+    <div class="search-row">
+      <input id="q" type="text" placeholder="e.g. land rate table, Gurugram market chart, price per sq yard…" autocomplete="off"/>
+      <button id="go">Search</button>
+    </div>
+    <div class="presets" id="presets"></div>
+    <div class="msg" id="msg"></div>
+    <div class="results" id="results"></div>
+  </div>
+
+  <div class="panel" id="panelAsk">
+    <div class="search-row">
+      <input id="aq" type="text" placeholder="Ask a question, or say 'extract the artefact matrix as json'…" autocomplete="off"/>
+      <button id="ago">Ask</button>
+    </div>
+    <div class="presets" id="apresets"></div>
+    <div class="msg" id="amsg"></div>
+    <div class="json-card" id="ajsonCard">
+      <div class="json-toolbar">
+        <span class="meta" id="ajsonMeta">—</span>
+        <button id="acopyJson">Copy JSON</button>
+      </div>
+      <div class="attempts-note" id="ajsonAttempts"></div>
+      <pre id="ajsonOut"></pre>
+    </div>
+    <div class="answer-card" id="answerCard">
+      <div class="answer-top">
+        <div class="answer-label">Answer</div>
+        <div class="answer-text" id="answerText"></div>
+      </div>
+      <div class="attempts-note" id="answerAttempts"></div>
+      <div class="source-strip">
+        <img id="sourceImg" src="" alt="cited source"/>
+        <div class="source-meta">
+          <div class="k">Read from</div>
+          <div class="v" id="sourceDoc">—</div>
+          <div class="k">Match confidence</div>
+          <div class="v" id="sourceScore">—</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel" id="panelExtract">
+    <div class="extract-head">
+      <p>Pulls every screenshot piece of one document, hands them all to a vision AI together, and asks for one
+      complete, structured JSON description — title, every table row, every chart segment, every label — meant
+      to be copied out and fed into a <em>different</em> system's own RAG pipeline.</p>
+      <button id="extractGo">Extract full JSON</button>
+    </div>
+    <div class="msg" id="emsg"></div>
+    <div class="json-card" id="jsonCard">
+      <div class="json-toolbar">
+        <span class="meta" id="jsonMeta">—</span>
+        <button id="copyJson">Copy JSON</button>
+      </div>
+      <div class="attempts-note" id="jsonAttempts"></div>
+      <pre id="jsonOut"></pre>
+    </div>
+  </div>
+</div>
+
+<div class="wrap" style="padding-top:0">
+  <div class="foot-note">
+    Backed by <code>POST /pixelrag/search</code> → <code>src/utils/pixelrag_bridge.py</code> →
+    PixelRAG's FAISS search API. If the service is offline, LandIQ's property analysis falls back to
+    text-only RAG automatically — nothing here is required for the rest of the app to work.
+  </div>
+</div>
+
+<script>
+const presets = ["land rate table","market price chart","residential real estate India","Gurugram property","commercial office market"];
+document.getElementById('presets').innerHTML = presets.map(p=>'<span class="preset" data-q="'+p+'">'+p+'</span>').join('');
+document.querySelectorAll('.preset').forEach(el=>el.addEventListener('click',()=>{document.getElementById('q').value=el.dataset.q;runSearch();}));
+
+async function loadStatus(){
+  try{
+    const r = await fetch('/pixelrag/status');
+    const d = await r.json();
+    document.getElementById('dotOnline').className = 'dot ' + (d.online?'on':'off');
+    document.getElementById('stOnline').textContent = d.online ? 'Online' : 'Offline (text RAG fallback active)';
+    document.getElementById('stModel').textContent = 'Qwen3-VL-Embedding-2B';
+    document.getElementById('stBase').textContent = d.base_url || '—';
+    document.getElementById('stVectors').textContent = d.index_built ? 'index ready' : 'not built yet';
+    return d.online;
+  }catch(e){
+    document.getElementById('dotOnline').className = 'dot off';
+    document.getElementById('stOnline').textContent = 'Unreachable';
+    return false;
+  }
+}
+
+function showMsg(text, cls){
+  const m = document.getElementById('msg');
+  m.className = 'msg ' + cls;
+  m.textContent = text;
+}
+function hideMsg(){ document.getElementById('msg').className = 'msg'; }
+
+function basename(p){
+  if(!p) return 'unknown source';
+  return p.split(/[\\/]/).pop();
+}
+
+async function runSearch(){
+  const q = document.getElementById('q').value.trim();
+  if(!q) return;
+  hideMsg();
+  const btn = document.getElementById('go');
+  btn.disabled = true; btn.textContent = 'Searching…';
+  document.getElementById('results').innerHTML = '';
+
+  try{
+    const r = await fetch('/pixelrag/search', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({query:q, n_docs:8, include_images:true})
+    });
+    const d = await r.json();
+    if(!d.success || !d.hits || !d.hits.length){
+      showMsg(d.note || 'No visual hits for this query — try one of the suggestions above, or the index may still be growing.', 'warn');
+      return;
+    }
+    document.getElementById('results').innerHTML = d.hits.map(h => {
+      const img = h.image_base64 ? '<img src="data:image/png;base64,'+h.image_base64+'" alt="retrieved tile"/>' : '<div style="height:160px;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12px">no preview</div>';
+      return '<div class="hit">'+img+
+        '<div class="hit-body">'+
+          '<div class="hit-score">score '+(h.score!=null?h.score.toFixed(3):'—')+'</div>'+
+          '<div class="hit-doc">'+basename(h.url)+'</div>'+
+          '<div class="hit-meta">tile '+h.tile_index+' · article '+h.article_id+'</div>'+
+        '</div></div>';
+    }).join('');
+    showMsg('Found '+d.count+' real screenshot tile(s) from your document index.', 'info');
+  }catch(e){
+    showMsg('Search failed: ' + e.message, 'warn');
+  }finally{
+    btn.disabled = false; btn.textContent = 'Search';
+  }
+}
+
+document.getElementById('go').addEventListener('click', runSearch);
+document.getElementById('q').addEventListener('keydown', e=>{ if(e.key==='Enter') runSearch(); });
+
+// ── Tabs ──────────────────────────────────────────────────
+const tabMap = [
+  ['tabSearch','panelSearch'], ['tabAsk','panelAsk'], ['tabExtract','panelExtract']
+];
+tabMap.forEach(([tabId])=>{
+  document.getElementById(tabId).addEventListener('click', ()=>{
+    tabMap.forEach(([t,p])=>{
+      document.getElementById(t).classList.toggle('active', t===tabId);
+      document.getElementById(p).classList.toggle('active', t===tabId);
+    });
+  });
+});
+
+// ── Ask a question OR extract as JSON — one box, auto-detected ─────────
+const apresets = ["What is the status of Monitoring requirements from the artefact matrix?","Extract the artefact matrix as json","Extract the evidence component mix chart as json"];
+document.getElementById('apresets').innerHTML = apresets.map(p=>'<span class="preset" data-q="'+p+'">'+p+'</span>').join('');
+document.querySelectorAll('#apresets .preset').forEach(el=>el.addEventListener('click',()=>{document.getElementById('aq').value=el.dataset.q;runAsk();}));
+
+function showAMsg(text, cls){
+  const m = document.getElementById('amsg');
+  m.className = 'msg ' + cls;
+  m.textContent = text;
+}
+function hideAMsg(){ document.getElementById('amsg').className = 'msg'; }
+
+function renderAttempts(attempts, elId){
+  const el = document.getElementById(elId);
+  if(!attempts || !attempts.length){ el.classList.remove('show'); el.textContent=''; return; }
+  el.textContent = 'Provider(s) tried before this one, in order — ' + attempts.join('  |  ');
+  el.classList.add('show');
+}
+
+async function runAsk(){
+  const q = document.getElementById('aq').value.trim();
+  if(!q) return;
+  hideAMsg();
+  document.getElementById('answerCard').classList.remove('show');
+  document.getElementById('ajsonCard').classList.remove('show');
+  const btn = document.getElementById('ago');
+  btn.disabled = true; btn.textContent = 'Reading…';
+
+  try{
+    const r = await fetch('/pixelrag/ask', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({question:q})
+    });
+    const d = await r.json();
+    if(!d.success || (!d.answer && !d.answer_json)){
+      showAMsg(d.note || 'Could not find or read a relevant answer.', 'warn');
+      return;
+    }
+    const s = d.source || {};
+    if(d.is_json && d.answer_json){
+      document.getElementById('ajsonMeta').textContent =
+        basename(s.document) + (s.tile_index!=null ? ' · tile '+s.tile_index : '') +
+        ' · ' + d.chunks_considered + ' chunk(s) read · ' + (d.reader||'—');
+      document.getElementById('ajsonOut').textContent = JSON.stringify(d.answer_json, null, 2);
+      renderAttempts(d.provider_attempts, 'ajsonAttempts');
+      document.getElementById('ajsonCard').classList.add('show');
+    } else {
+      document.getElementById('answerText').textContent = d.answer;
+      renderAttempts(d.provider_attempts, 'answerAttempts');
+      document.getElementById('sourceImg').src = s.image_base64 ? 'data:image/png;base64,'+s.image_base64 : '';
+      document.getElementById('sourceDoc').textContent = basename(s.document) + (s.tile_index!=null ? ' · tile '+s.tile_index : '');
+      document.getElementById('sourceScore').textContent = s.score!=null ? s.score.toFixed(3) : '—';
+      document.getElementById('answerCard').classList.add('show');
+    }
+  }catch(e){
+    showAMsg('Request failed: ' + e.message, 'warn');
+  }finally{
+    btn.disabled = false; btn.textContent = 'Ask';
+  }
+}
+document.getElementById('ago').addEventListener('click', runAsk);
+document.getElementById('aq').addEventListener('keydown', e=>{ if(e.key==='Enter') runAsk(); });
+document.getElementById('acopyJson').addEventListener('click', ()=>{
+  navigator.clipboard.writeText(document.getElementById('ajsonOut').textContent).then(()=>{
+    const b = document.getElementById('acopyJson');
+    const orig = b.textContent; b.textContent = 'Copied!';
+    setTimeout(()=>{ b.textContent = orig; }, 1500);
+  });
+});
+
+// ── Extract full JSON (whole-document structured extraction) ───────────
+function showEMsg(text, cls){
+  const m = document.getElementById('emsg');
+  m.className = 'msg ' + cls;
+  m.textContent = text;
+}
+function hideEMsg(){ document.getElementById('emsg').className = 'msg'; }
+
+async function runExtract(){
+  hideEMsg();
+  document.getElementById('jsonCard').classList.remove('show');
+  const btn = document.getElementById('extractGo');
+  btn.disabled = true; btn.textContent = 'Reading whole document… (can take up to a minute)';
+
+  try{
+    const r = await fetch('/pixelrag/extract', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({})
+    });
+    const d = await r.json();
+    if(!d.success || !d.extracted){
+      showEMsg(d.note || 'Extraction failed.', 'warn');
+      return;
+    }
+    document.getElementById('jsonMeta').textContent =
+      basename(d.document) + ' · ' + d.chunks_used + ' image chunk(s) · read by ' + (d.reader||'—') +
+      (d.parsed_as_json ? '' : ' · (model did not return clean JSON — showing raw text)');
+    document.getElementById('jsonOut').textContent = JSON.stringify(d.extracted, null, 2);
+    renderAttempts(d.provider_attempts, 'jsonAttempts');
+    document.getElementById('jsonCard').classList.add('show');
+    showEMsg('Extraction complete — copy the JSON below into your other RAG pipeline.', 'info');
+  }catch(e){
+    showEMsg('Request failed: ' + e.message, 'warn');
+  }finally{
+    btn.disabled = false; btn.textContent = 'Extract full JSON';
+  }
+}
+document.getElementById('extractGo').addEventListener('click', runExtract);
+document.getElementById('copyJson').addEventListener('click', ()=>{
+  navigator.clipboard.writeText(document.getElementById('jsonOut').textContent).then(()=>{
+    const b = document.getElementById('copyJson');
+    const orig = b.textContent; b.textContent = 'Copied!';
+    setTimeout(()=>{ b.textContent = orig; }, 1500);
+  });
+});
+
+loadStatus();
+setInterval(loadStatus, 15000);
+</script>
+
+</body>
+</html>
