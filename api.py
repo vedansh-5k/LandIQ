@@ -1158,10 +1158,35 @@ async def analyse_land(req: LandQueryRequest):
                 print(f"  [LANGFLOW] Attempt failed ({str(e)[:120]}) — falling back to local")
 
         if final_state is None:
+            def _run_advisor_with_config():
+                # Runs on a worker thread via asyncio.to_thread. The thread-
+                # local LLM config set above (set_active_config /
+                # set_active_external_config) lives on the main event-loop
+                # thread and does not carry into this new thread, so it must
+                # be re-applied here before run_dynamic_advisor (and the
+                # agent threads it spawns) can see it — and cleared
+                # afterward, since asyncio.to_thread's worker threads are
+                # pooled and reused across later requests.
+                if cfg.get("_external"):
+                    set_active_external_config(req.selected_config, cfg.get("_external_base"))
+                else:
+                    set_active_config(req.selected_config)
+                try:
+                    return run_dynamic_advisor(user_inputs)
+                finally:
+                    clear_active_config()
+                    clear_active_external_config()
+
             # ── Headroom: compress input tokens if enabled ──
             _hm = user_inputs.get('headroom_mode', False)
             with headroom_ctx(_hm):
-                final_state = run_dynamic_advisor(user_inputs)
+                # Off the event loop thread — run_dynamic_advisor makes many
+                # blocking LLM calls across several agent layers and can run
+                # for minutes; calling it directly here would freeze the
+                # entire server (every request, every page) for that whole
+                # time, exactly like the bug already found and fixed in the
+                # PixelRAG endpoints.
+                final_state = await asyncio.to_thread(_run_advisor_with_config)
             final_state.setdefault("orchestrator_source", "local")
             _headroom_stats = get_headroom_stats()
         else:

@@ -409,7 +409,7 @@ def run_dynamic_agent(agent_name, state):
                 from langchain_groq import ChatGroq
                 llm = ChatGroq(
                     api_key=os.environ["GROQ_API_KEY"],
-                    model=_model_hint or "llama-3.3-70b-versatile",
+                    model=_model_hint or os.environ.get("GROQ_MODEL", "openai/gpt-oss-120b"),
                     temperature=agent["temperature"],
                     max_tokens=MAX_OUT_TOKENS,
                 )
@@ -476,7 +476,7 @@ def run_dynamic_agent(agent_name, state):
             from langchain_groq import ChatGroq
             llm = ChatGroq(
                 api_key=os.environ.get("GROQ_API_KEY", ""),
-                model=os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile"),
+                model=os.environ.get("GROQ_MODEL", "openai/gpt-oss-120b"),
                 temperature=agent["temperature"],
                 max_tokens=MAX_OUT_TOKENS,
             )

@@ -125,7 +125,7 @@ def _get_planner_llm():
         try:
             from langchain_groq import ChatGroq
             llm = ChatGroq(api_key=groq_key,
-                           model=os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile"),
+                           model=os.environ.get("GROQ_MODEL", "openai/gpt-oss-120b"),
                            temperature=0.1, timeout=45, max_retries=1)
             print("  [ORCHESTRATOR] Planner LLM: ChatGroq (local)")
             return llm

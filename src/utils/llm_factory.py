@@ -35,7 +35,7 @@ from src.utils.llm_configurator import get_active_llm
 _runtime_keys: dict = {}
 _tls = threading.local()
 
-GROQ_FALLBACK_MODEL = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
+GROQ_FALLBACK_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-flash-latest")
 
 

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>LandIQ — Know Your Land Before You Spend a Rupee</title>
+  <title>LandIQ, Know Your Land Before You Spend a Rupee</title>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
   <style>
     :root{--ink:#081209;--forest:#0e2415;--moss:#1a3a24;--sage:#2d6042;--leaf:#4a8c5c;--cream:#ddd2b8;--parch:#d0c3a0;--stone:#b7a67e;--gold:#c9a24b;--gold-lt:#ecd28a;--white:#ffffff;--muted:#5c5646;--red:#b03030;}
@@ -26,11 +26,11 @@
     .nav-cta{background:var(--gold);color:var(--forest);border:none;border-radius:100px;padding:11px 26px;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.3px;transition:all .25s;}
     .nav-cta:hover{background:var(--gold-lt);transform:translateY(-1px);box-shadow:0 8px 24px rgba(201,162,75,.35);}
     .hero{position:relative;height:100vh;max-height:920px;min-height:600px;display:flex;align-items:center;padding:68px 0 64px;background:var(--forest);overflow:hidden;}
-    .hero-img{position:absolute;inset:-4% -4% -12%;background-image:url('https://images.unsplash.com/photo-1703850827351-a1be4d85a095?w=2000&q=85');background-size:cover;background-position:center 45%;opacity:.6;filter:saturate(1.25) contrast(1.08);animation:kenburns 24s ease-in-out infinite alternate;will-change:transform;}
+    .hero-img{position:absolute;inset:-4% -4% -12%;background-image:url('https://images.unsplash.com/photo-1703850827351-a1be4d85a095?w=2000&q=85');background-size:cover;background-position:center 45%;opacity:.78;filter:saturate(1.25) contrast(1.08);animation:kenburns 24s ease-in-out infinite alternate;will-change:transform;}
     .hero-scanlines{position:absolute;inset:0;background-image:repeating-linear-gradient(0deg,rgba(236,210,138,.05) 0px,rgba(236,210,138,.05) 1px,transparent 1px,transparent 3px);mix-blend-mode:overlay;opacity:.4;pointer-events:none;}
     .hero-glow{position:absolute;left:-10%;bottom:-10%;width:60%;height:70%;background:radial-gradient(ellipse at bottom left,rgba(201,162,75,.16),transparent 65%);pointer-events:none;}
     @keyframes kenburns{from{transform:scale(1.06) translateY(0);}to{transform:scale(1.0) translateY(-10px);}}
-    .hero-gradient{position:absolute;inset:0;background:radial-gradient(ellipse 80% 60% at 20% 100%,rgba(8,18,9,.9),transparent 65%),linear-gradient(to top,rgba(8,18,9,.97) 0%,rgba(8,18,9,.45) 45%,rgba(8,18,9,.15) 100%);}
+    .hero-gradient{position:absolute;inset:0;background:radial-gradient(ellipse 80% 60% at 20% 100%,rgba(8,18,9,.78),transparent 65%),linear-gradient(to top,rgba(8,18,9,.88) 0%,rgba(8,18,9,.32) 45%,rgba(8,18,9,.06) 100%);}
     .hero-grain{position:absolute;inset:0;opacity:.05;pointer-events:none;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 240 240' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");}
     .hero-content{position:relative;z-index:2;max-width:1200px;margin:0 auto;width:100%;padding:0 48px;}
     .hero-eyebrow{font-size:11px;font-weight:600;color:var(--gold);text-transform:uppercase;letter-spacing:3px;margin-bottom:22px;display:flex;align-items:center;gap:12px;opacity:0;animation:fadeup 1s .2s cubic-bezier(.16,1,.3,1) forwards;}
@@ -112,7 +112,7 @@
     .how-points li::before{content:'—';color:var(--gold);font-weight:700;flex-shrink:0;}
     .photo-break{position:relative;height:540px;display:flex;align-items:center;justify-content:center;overflow:hidden;}
     .photo-break-img{position:absolute;inset:-6%;background-size:cover;background-position:center;will-change:transform;}
-    .photo-break-overlay{position:absolute;inset:0;background:rgba(8,18,9,.74);}
+    .photo-break-overlay{position:absolute;inset:0;background:rgba(8,18,9,.56);}
     .photo-break-content{position:relative;z-index:2;text-align:center;padding:0 48px;max-width:860px;}
     .photo-break-quote{font-family:'Cormorant Garamond',serif;font-size:clamp(28px,4vw,54px);font-style:italic;font-weight:400;color:var(--white);line-height:1.32;margin-bottom:22px;}
     .photo-break-attr{font-size:12px;color:var(--gold);letter-spacing:2.5px;text-transform:uppercase;}
@@ -175,7 +175,7 @@
     .agent-desc{font-size:12px;color:var(--muted);line-height:1.65;transition:color .3s;}
     .cta-section{position:relative;padding:160px 48px;display:flex;align-items:center;justify-content:center;overflow:hidden;text-align:center;}
     .cta-bg{position:absolute;inset:-6%;background-image:url('https://images.unsplash.com/photo-1720155390935-f49e18525eb9?w=1800&q=85');background-size:cover;background-position:center 65%;animation:kenburns 26s ease-in-out infinite alternate;will-change:transform;}
-    .cta-overlay{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(8,18,9,.88),rgba(8,18,9,.8));}
+    .cta-overlay{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(8,18,9,.7),rgba(8,18,9,.6));}
     .cta-content{position:relative;z-index:2;max-width:700px;}
     .cta-content h2{font-family:'Cormorant Garamond',serif;font-size:clamp(38px,5.4vw,72px);font-weight:600;color:var(--white);line-height:1.08;letter-spacing:-1.5px;margin-bottom:22px;}
     .cta-content h2 em{font-style:italic;color:var(--gold-lt);}
@@ -411,9 +411,9 @@
 <section class="hero">
   <div class="hero-img"></div><div class="hero-gradient"></div><div class="hero-scanlines"></div><div class="hero-glow"></div><div class="hero-grain"></div>
   <div class="hero-content">
-    <div class="hero-eyebrow">AI-Powered Indian Land Intelligence</div>
+    <div class="hero-eyebrow">AI Powered Indian Land Intelligence</div>
     <h1><span class="hl">Know your land</span><span class="hl">before you</span><span class="hl"><em>spend a rupee.</em></span></h1>
-    <p class="hero-sub">LandIQ runs <span id="heroCount">8</span> specialist AI agents in parallel — legal, financial, environmental, market — and delivers a complete investment verdict in under 30 seconds.</p>
+    <p class="hero-sub">LandIQ runs <span id="heroCount">8</span> specialist AI agents in parallel; legal, financial, environmental, market, and delivers a complete investment verdict in under 30 seconds.</p>
     <div class="hero-actions">
       <button class="btn-hero" onclick="document.getElementById('mainForm').scrollIntoView({behavior:'smooth'})">Analyse My Land →</button>
       <button class="btn-hero-ghost" onclick="document.getElementById('orch').scrollIntoView({behavior:'smooth'})">Watch the Orchestrator</button>
@@ -460,7 +460,7 @@
     <div style="height:64px"></div>
     <div class="how-step">
       <div class="how-photo reveal"><img src="https://images.unsplash.com/photo-1564834552305-aea63611ff08?w=900&q=80" alt="Premium Noida residential development" loading="lazy"/><span class="tag">STEP 01 · INPUT</span></div>
-      <div class="reveal reveal-d1"><div class="how-num">01</div><div class="how-title">Tell us about your land.</div><p class="how-desc">Enter the state, city, locality, size, type, and your budget. Takes 90 seconds. No sign-up, no fees.</p><ul class="how-points"><li>Location down to the locality level</li><li>Land type: residential, commercial, agricultural, industrial</li><li>Your full financial picture — budget, loan status</li></ul></div>
+      <div class="reveal reveal-d1"><div class="how-num">01</div><div class="how-title">Tell us about your land.</div><p class="how-desc">Enter the state, city, locality, size, type, and your budget. Takes 90 seconds. No sign-up, no fees.</p><ul class="how-points"><li>Location down to the locality level</li><li>Land type: residential, commercial, agricultural, industrial</li><li>Your full financial picture: budget and loan status</li></ul></div>
     </div>
     <div class="how-step reverse">
       <div class="how-photo reveal"><img src="https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=900&q=80" alt="AI Orchestrator" loading="lazy"/><span class="tag">STEP 02 · PLAN=LLM</span></div>
@@ -468,11 +468,11 @@
     </div>
     <div class="how-step">
       <div class="how-photo reveal"><img src="https://images.unsplash.com/photo-1695667424131-a9680e0307ee?w=900&q=80" alt="Gurgaon business district" loading="lazy"/><span class="tag">STEP 03 · PARALLEL AGENTS</span></div>
-      <div class="reveal reveal-d1"><div class="how-num">03</div><div class="how-title"><span id="stepAgentCount">8</span> specialist agents<br/>analyse in parallel.</div><p class="how-desc">Each agent is a domain expert — legal risk, financial returns, market timing, environmental hazards, bull case, bear case.</p><ul class="how-points"><li>Location Intelligence — connectivity, appreciation</li><li>Legal &amp; Title — encumbrances, RERA status</li><li>Financial ROI — 5yr/10yr returns, breakeven</li></ul></div>
+      <div class="reveal reveal-d1"><div class="how-num">03</div><div class="how-title"><span id="stepAgentCount">8</span> specialist agents<br/>analyse in parallel.</div><p class="how-desc">Each agent is a domain expert in one thing: legal risk, financial returns, market timing, environmental hazards, bull case, or bear case.</p><ul class="how-points"><li>Location Intelligence: connectivity and appreciation</li><li>Legal &amp; Title: encumbrances and RERA status</li><li>Financial ROI: 5yr/10yr returns and breakeven</li></ul></div>
     </div>
     <div class="how-step reverse">
       <div class="how-photo reveal"><img src="https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=900&q=80" alt="Final recommendation" loading="lazy"/><span class="tag">STEP 04 · VERDICT</span></div>
-      <div class="reveal reveal-d1"><div class="how-num">04</div><div class="how-title">One clear verdict, every<br/>decision explained.</div><p class="how-desc">The Senior Consultant agent reads all outputs and delivers a final recommendation — Buy, Hold, or Avoid.</p><ul class="how-points"><li>Every recommendation traces back to the agent</li><li>Token count, cost, duration shown</li><li>All runs logged to MLflow on DagsHub</li></ul></div>
+      <div class="reveal reveal-d1"><div class="how-num">04</div><div class="how-title">One clear verdict, every<br/>decision explained.</div><p class="how-desc">The Senior Consultant agent reads all outputs and delivers a final recommendation: Buy, Hold, or Avoid.</p><ul class="how-points"><li>Every recommendation traces back to the agent</li><li>Token count, cost, duration shown</li><li>All runs logged to MLflow on DagsHub</li></ul></div>
     </div>
   </div>
 </section>
@@ -480,8 +480,8 @@
   <div class="photo-break-img" style="background-image:url('https://images.unsplash.com/photo-1666843527155-14ec5f016802?w=1700&q=80')"></div>
   <div class="photo-break-overlay"></div>
   <div class="photo-break-content reveal">
-    <div class="photo-break-quote">"Most land buyers in India decide based on what their neighbour did. LandIQ gives you what your neighbour doesn't have — an unbiased AI verdict."</div>
-    <div class="photo-break-attr">LandIQ — Indian Land Investment Advisor</div>
+    <div class="photo-break-quote">"Most land buyers in India decide based on what their neighbour did. LandIQ gives you what your neighbour doesn't have an unbiased AI verdict."</div>
+    <div class="photo-break-attr">LandIQ, Indian Land Investment Advisor</div>
   </div>
 </div>
 <section class="trust-section topo dark">
@@ -489,10 +489,10 @@
     <div class="eyebrow reveal" style="color:rgba(236,210,138,.7)">Why Trust LandIQ</div>
     <div class="section-title reveal reveal-d1" style="color:var(--white)">Every recommendation<br/>is traceable and explained.</div>
     <div class="trust-grid">
-      <div class="trust-card reveal"><span class="trust-icon">🧠</span><div class="trust-title">LLM Orchestrator — Not Rules</div><p class="trust-desc">An LLM reads your inputs and writes the execution plan — which agents run, in what layers, in what order.</p><div class="trust-metric">plan=llm</div></div>
+      <div class="trust-card reveal"><span class="trust-icon">🧠</span><div class="trust-title">LLM Orchestrator, Not Rules</div><p class="trust-desc">An LLM reads your inputs and writes the execution plan: which agents run, in what layers, and in what order.</p><div class="trust-metric">plan=llm</div></div>
       <div class="trust-card reveal reveal-d1"><span class="trust-icon">⚖️</span><div class="trust-title">Bull + Bear, Always Both</div><p class="trust-desc">LandIQ runs a dedicated Bull Case agent AND a Bear Case agent on every analysis. Never filtered.</p><div class="trust-metric">2 sides</div></div>
       <div class="trust-card reveal reveal-d2"><span class="trust-icon">📊</span><div class="trust-title">Full Token Transparency</div><p class="trust-desc">Every analysis shows input tokens, output tokens, cost, duration, and per-agent breakdowns.</p><div class="trust-metric">100% visible</div></div>
-      <div class="trust-card reveal"><span class="trust-icon">📈</span><div class="trust-title">Every Run Logged to MLflow</div><p class="trust-desc">All analyses tracked in MLflow on DagsHub — config, agents, tokens, cost, verdict.</p><div class="trust-metric">DagsHub</div></div>
+      <div class="trust-card reveal"><span class="trust-icon">📈</span><div class="trust-title">Every Run Logged to MLflow</div><p class="trust-desc">All analyses tracked in MLflow on DagsHub, including config, agents, tokens, cost, and verdict.</p><div class="trust-metric">DagsHub</div></div>
       <div class="trust-card reveal reveal-d1"><span class="trust-icon">🛡️</span><div class="trust-title">Guardrails on Every Output</div><p class="trust-desc">Optional safety guardrails: local NeMo, external API, or HuggingFace inference.</p><div class="trust-metric">3 modes</div></div>
       <div class="trust-card reveal reveal-d2"><span class="trust-icon">🔌</span><div class="trust-title">Bring Your Own LLM</div><p class="trust-desc">Connect Groq, Gemini, OpenAI, or any OpenAI-compatible endpoint. LiteLLM handles priority fallback.</p><div class="trust-metric">2250+ models</div></div>
     </div>
@@ -504,11 +504,11 @@
     <div class="accuracy-text reveal">
       <div class="eyebrow">Accuracy &amp; Coverage</div>
       <div class="section-title">What each agent<br/>measures.</div>
-      <p class="section-sub">Domain-specialist prompts built on a RAG knowledge base of Indian real estate law, market data, and financial models.</p>
+      <p class="section-sub">Domain specialist prompts built on a RAG knowledge base of Indian real estate law, market data, and financial models.</p>
       <div class="accuracy-proof">
-        <div class="proof-item"><span class="proof-icon">📚</span><div class="proof-text"><b>5000+ knowledge chunks</b> in ChromaDB — RERA regulations, stamp duty, market reports, environmental rules.</div></div>
-        <div class="proof-item"><span class="proof-icon">🗺️</span><div class="proof-text"><b>25 Indian states</b> — flood zone maps, infrastructure pipelines, zoning laws, circle rates.</div></div>
-        <div class="proof-item"><span class="proof-icon">🔄</span><div class="proof-text"><b>Every agent is independent</b> — Senior Consultant sees all outputs and reconciles conflicts.</div></div>
+        <div class="proof-item"><span class="proof-icon">📚</span><div class="proof-text"><b>5000+ knowledge chunks</b> in ChromaDB, covering RERA regulations, stamp duty, market reports, and environmental rules.</div></div>
+        <div class="proof-item"><span class="proof-icon">🗺️</span><div class="proof-text"><b>25 Indian states</b>, with flood zone maps, infrastructure pipelines, zoning laws, and circle rates.</div></div>
+        <div class="proof-item"><span class="proof-icon">🔄</span><div class="proof-text"><b>Every agent is independent.</b> The Senior Consultant sees all outputs and reconciles conflicts.</div></div>
       </div>
     </div>
     <div class="accuracy-metrics reveal reveal-d1">
@@ -525,7 +525,7 @@
   <div class="section-inner">
     <div class="eyebrow reveal">Sample Output</div>
     <div class="section-title reveal reveal-d1">What a real analysis looks like.</div>
-    <p class="section-sub reveal reveal-d2" style="margin-bottom:0">500 sq yards, Sector 44 Gurugram, ₹1.2Cr budget — 9 agents, 18.4 seconds.</p>
+    <p class="section-sub reveal reveal-d2" style="margin-bottom:0">500 sq yards, Sector 44 Gurugram, ₹1.2Cr budget, 9 agents, 18.4 seconds.</p>
     <div class="output-grid">
       <div class="output-card reveal"><div class="output-card-label">📍 Location Score</div><div class="output-metric-big">87<span class="output-metric-unit">/100</span></div><div class="output-progress"><div class="output-progress-fill fill-green"></div></div><div class="output-desc">Metro connectivity + Dwarka Expressway extension drives appreciation to High.</div></div>
       <div class="output-card reveal reveal-d1"><div class="output-card-label">💰 ROI (5 Year)</div><div class="output-metric-big">34<span class="output-metric-unit">%</span></div><div class="output-progress"><div class="output-progress-fill fill-gold"></div></div><div class="output-desc">Conservative scenario with ₹22,000/month rental income. Optimistic: 48%.</div></div>
@@ -533,7 +533,7 @@
       <div class="output-card reveal"><div class="output-card-label">📊 Market Score</div><div class="output-metric-big">79<span class="output-metric-unit">/100</span></div><div class="output-progress"><div class="output-progress-fill fill-blue"></div></div><div class="output-desc">Buyer demand: High. Market timing: Favourable.</div></div>
       <div class="output-card reveal reveal-d1"><div class="output-card-label">🔍 Breakeven</div><div class="output-metric-big">6.2<span class="output-metric-unit">yrs</span></div><div class="output-progress"><div class="output-progress-fill fill-teal"></div></div><div class="output-desc">Including stamp duty, registration, brokerage.</div></div>
       <div class="output-card reveal reveal-d2"><div class="output-card-label">🐻 Bear Case</div><div class="output-metric-big" style="font-size:28px;color:#856404">Moderate</div><div class="output-progress"><div class="output-progress-fill fill-purple" style="width:40%"></div></div><div class="output-desc">Downside: ₹92L if market corrects 15%.</div></div>
-      <div class="verdict-banner reveal"><div style="flex:1"><div class="verdict-label">Senior Consultant — Final Verdict</div><div class="verdict-text">Strong buy with staged entry — secure before Dwarka Expressway launch in Q3.</div><div class="verdict-conf">Confidence: High • 9 agents • 18.4s • ₹0.0042 cost</div></div><div class="verdict-chip">Strongly Recommend</div></div>
+      <div class="verdict-banner reveal"><div style="flex:1"><div class="verdict-label">Senior Consultant: Final Verdict</div><div class="verdict-text">Strong buy with staged entry: secure before the Dwarka Expressway launch in Q3.</div><div class="verdict-conf">Confidence: High • 9 agents • 18.4s • ₹0.0042 cost</div></div><div class="verdict-chip">Strongly Recommend</div></div>
     </div>
   </div>
 </section>
@@ -541,7 +541,7 @@
   <div class="section-inner">
     <div class="agents-header">
       <div class="reveal"><div class="eyebrow">Specialist Agents</div><div class="section-title">Eight experts.<br/>One verdict.</div></div>
-      <p class="section-sub reveal reveal-d1">Each agent has a dedicated system prompt, its own temperature setting, and domain-specific output fields.</p>
+      <p class="section-sub reveal reveal-d1">Each agent has a dedicated system prompt, its own temperature setting, and domain specific output fields.</p>
     </div>
     <div class="agents-grid">
       <div class="agent-card reveal"><span class="agent-icon">📍</span><div class="agent-name">Location Intelligence</div><div class="agent-desc">Connectivity, upcoming infrastructure, appreciation zones</div></div>
@@ -559,8 +559,8 @@
   <div class="photo-break-img" style="background-image:url('https://images.unsplash.com/photo-1512918728675-ed5a9ecdebfd?w=1700&q=80')"></div>
   <div class="photo-break-overlay"></div>
   <div class="photo-break-content reveal">
-    <div class="photo-break-quote">"Every plot of land tells two stories — the one the seller tells you, and the one the documents actually say. LandIQ reads the second one."</div>
-    <div class="photo-break-attr">LandIQ — Indian Land Investment Advisor</div>
+    <div class="photo-break-quote">"Every plot of land tells two stories  the one the seller tells you, and the one the documents actually say. LandIQ reads the second one."</div>
+    <div class="photo-break-attr">LandIQ; Indian Land Investment Advisor</div>
   </div>
 </div>
 <section class="form-section topo" id="mainForm">
@@ -572,7 +572,7 @@
       <div class="smart-card">
         <div class="smart-eyebrow">✨ Smart Fill</div>
         <div class="smart-title">Describe your land in plain English</div>
-        <div class="smart-sub">Just type what you want — we'll fill the form for you instantly.</div>
+        <div class="smart-sub">Just type what you want, and we'll fill the form for you instantly.</div>
         <div class="smart-input-row">
           <textarea class="smart-ta" id="smartInput" rows="2"
             placeholder="e.g. I want to buy 200 sq yards residential plot in Sector 44 Gurugram for 1.2 crore, looking to build a house in 5 years"></textarea>
@@ -680,7 +680,7 @@
           <div class="hr"></div>
           <div class="cave-box">
             <div class="cave-hdr">
-              <div><div class="cave-ttl">🪨 Caveman Mode</div><div class="cave-sub">Why use many token when few do trick — cuts ~65% output tokens</div></div>
+              <div><div class="cave-ttl">🪨 Caveman Mode</div><div class="cave-sub">Why use many token when few do trick? Cuts ~65% output tokens.</div></div>
               <div class="cave-ctrls">
                 <select id="caveLevel" class="cave-sel"><option value="lite">Lite (~40%)</option><option value="full" selected>Full (~65%)</option><option value="ultra">Ultra (~80%)</option></select>
                 <div style="display:flex;align-items:center;gap:6px">
@@ -690,7 +690,7 @@
                 </div>
               </div>
             </div>
-            <div class="cave-st" id="caveSt">🧠 Normal Mode — full detail responses</div>
+            <div class="cave-st" id="caveSt">🧠 Normal Mode: full detail responses</div>
           </div>
           <div style="margin-top:10px;padding:8px 12px;background:rgba(139,115,85,0.08);border-radius:8px;display:flex;align-items:center;gap:10px;">
             <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.92em;">
@@ -751,7 +751,7 @@
     </div>
     <div class="rg" id="resGrid"></div>
     <div class="rec-card" id="recCard" style="display:none">
-      <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:14px">🏛️ Senior Consultant — Final Recommendation</div>
+      <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:14px">🏛️ Senior Consultant: Final Recommendation</div>
       <span class="verdict" id="verdictChip">BUY</span>
       <p id="recSummary" style="font-size:14px;color:var(--muted);line-height:1.8;margin-bottom:16px"></p>
       <div id="recDetails"></div>
@@ -774,7 +774,7 @@
 </div>
 <footer>
   <div class="footer-logo">Land<span>IQ</span></div>
-  <div class="footer-text">Indian Land Investment Advisor • Built with Multi-Agent AI • EY GenAI Internship 2026</div>
+  <div class="footer-text">Indian Land Investment Advisor • Built with MultiAgent AI • EY GenAI Internship 2026</div>
 </footer>
 
 <script>
@@ -1195,7 +1195,7 @@ function toggleCave(cb){
   caveOn=cb.checked;const lv=document.getElementById('caveLevel').value;
   const st=document.getElementById('caveSt');
   if(caveOn){st.innerHTML=`🪨 Caveman <b>${lv.toUpperCase()}</b> — saves ${{lite:'~40%',full:'~65%',ultra:'~80%'}[lv]} tokens`;st.style.color='var(--sage)';}
-  else{st.innerHTML='🧠 Normal Mode — full detail responses';st.style.color='var(--muted)';}
+  else{st.innerHTML='🧠 Normal Mode: full detail responses';st.style.color='var(--muted)';}
 }
 
 function openModal(){_clearModal();document.getElementById('modalOv').classList.add('show');switchTab('type');}
