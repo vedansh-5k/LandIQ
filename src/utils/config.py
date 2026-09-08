@@ -32,7 +32,7 @@ LANGCHAIN_API_KEY = os.getenv("LANGCHAIN_API_KEY")
 LANGCHAIN_PROJECT = os.getenv(
     "LANGCHAIN_PROJECT", "AI_Boardroom_V3")
 
-CHROMA_DB_PATH = "./chroma_db"
+CHROMA_DB_PATH = "./chroma_db_land"
 EMBEDDING_MODEL = "all-MiniLM-L6-v2"
 CHUNK_SIZE = 1000
 CHUNK_OVERLAP = 200

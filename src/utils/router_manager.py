@@ -38,16 +38,23 @@ def build_router_for_config(config: dict):
         logger.error("litellm not installed — run: pip install litellm")
         return
 
-    from src.utils.db import get_db_connection
+    from src.utils.db import get_db_connection, get_api_key_for_provider
+    from src.utils.crypto import decrypt_secret
 
     full_name = config["full_name"]
 
-    # Load global models for API key lookup
+    # Load global models for API key lookup (keys are stored encrypted —
+    # decrypt here, once, rather than at every completion() call)
     try:
         with get_db_connection() as conn:
             c = conn.cursor()
             c.execute("SELECT * FROM global_models")
-            global_models = {r["litellm_model"]: dict(r) for r in c.fetchall()}
+            global_models = {}
+            for r in c.fetchall():
+                row = dict(r)
+                if row.get("api_key"):
+                    row["api_key"] = decrypt_secret(row["api_key"])
+                global_models[row["litellm_model"]] = row
     except Exception:
         global_models = {}
 
@@ -63,14 +70,21 @@ def build_router_for_config(config: dict):
         for m in models:
             litellm_model = m.get("litellm_model", "")
             gm = global_models.get(litellm_model, {})
-            
-            provider = gm.get("provider", "")
+
+            # Provider comes from the stored pool row if we have one, else
+            # from the "<provider>/model" prefix already present on the
+            # config's own model string (e.g. "groq/openai/gpt-oss-120b").
+            provider = gm.get("provider") or (
+                litellm_model.split("/", 1)[0] if "/" in litellm_model else ""
+            )
             actual_model = litellm_model
             if provider and provider != "other" and "/" not in actual_model:
                 actual_model = f"{provider}/{actual_model}"
-                
-            api_key = gm.get("api_key") or (
-                os.environ.get(m["api_key_env"]) if m.get("api_key_env") else None
+
+            api_key = (
+                gm.get("api_key")
+                or (os.environ.get(m["api_key_env"]) if m.get("api_key_env") else None)
+                or (get_api_key_for_provider(provider) if provider else None)
             )
             api_base = gm.get("api_base") or m.get("api_base")
 
@@ -90,11 +104,17 @@ def build_router_for_config(config: dict):
         logger.warning(f"No models in router list for {full_name} — skipping")
         return
 
+    # num_retries/timeout were 5/120 — stacked on top of dynamic_agent.py's own
+    # 3x retry + Gemini fallback (already measured working this session), a
+    # single agent could see up to 5x3=15 attempts and multi-minute hangs
+    # before ever reaching that fallback. This router only needs to catch a
+    # genuinely transient blip; dynamic_agent.py owns the real retry/fallback
+    # logic now, so it doesn't need to duplicate that work.
     router = Router(
         model_list=router_model_list,
-        num_retries=5,
-        timeout=120,
-        retry_after=5,
+        num_retries=1,
+        timeout=30,
+        retry_after=2,
         routing_strategy="usage-based-routing-v2",
         enable_pre_call_checks=False,
         allowed_fails=10,

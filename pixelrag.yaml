@@ -1,8 +1,11 @@
 # pixelrag.yaml — LandIQ visual RAG config
 #
-# Points PixelRAG at the SAME PDF folder the existing text RAG already uses
-# (src/rag/loader.py -> data/sample_reports/). Same knowledge base, now also
-# indexed as screenshots so tables/maps/layout survive retrieval.
+# Points PixelRAG at the SAME clean real-estate PDF folder the text RAG uses
+# (src/rag/loader.py -> data/land_reports/) - 11 verified real-estate market
+# reports, not the old mixed data/sample_reports/ folder (which had ~105
+# unrelated personal/academic PDFs diluting retrieval). Same knowledge base
+# as text RAG, now also indexed as screenshots so tables/maps/layout survive
+# retrieval.
 #
 # Nothing here is a Python literal — every value is editable in this file,
 # not hardcoded in code. Change `embed.device` to `cuda` if you later run
@@ -10,7 +13,7 @@
 
 source:
   type: local
-  path: ./data/sample_reports
+  path: ./data/land_reports
 
 embed:
   model: Qwen/Qwen3-VL-Embedding-2B

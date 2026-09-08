@@ -11,6 +11,7 @@ Each model needs metadata: provider, context window, speed, cost, capabilities.
 This file is the single source of truth for all that metadata.
 """
 
+import os
 from typing import List, Dict, Optional
 from pydantic import BaseModel
 
@@ -42,10 +43,14 @@ class ModelMeta(BaseModel):
 CATALOGUE: List[ModelMeta] = [
     ModelMeta(
         id="groq-llama",
-        name="Llama 3.3 70B",
+        name="Groq Llama/GPT-OSS",
         provider="Groq",
         provider_logo="🦙",
-        model_string="llama-3.3-70b-versatile",
+        # Was a hardcoded "llama-3.3-70b-versatile" — Groq decommissioned that
+        # model, causing 404s on every agent call. Reads GROQ_MODEL the same
+        # way src/utils/llm_configurator.py does now, so this display-only
+        # catalogue can't drift from the live model again.
+        model_string=os.environ.get("GROQ_MODEL", "openai/gpt-oss-120b"),
         context_window=128000,
         max_output_tokens=32768,
         speed="Fast",

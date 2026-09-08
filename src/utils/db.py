@@ -161,6 +161,8 @@ def get_global_models() -> list:
 
 
 def add_global_model(litellm_model, provider, api_key, api_base):
+    from src.utils.crypto import encrypt_secret
+    stored_key = encrypt_secret(api_key) if api_key else api_key
     with get_db_connection() as conn:
         conn.execute('''
             INSERT INTO global_models (litellm_model,provider,api_key,api_base,created_at)
@@ -169,7 +171,7 @@ def add_global_model(litellm_model, provider, api_key, api_base):
                 provider=excluded.provider,
                 api_key=excluded.api_key,
                 api_base=excluded.api_base
-        ''', (litellm_model, provider, api_key, api_base,
+        ''', (litellm_model, provider, stored_key, api_base,
               datetime.now(timezone.utc).isoformat()))
         conn.commit()
 
@@ -181,9 +183,29 @@ def delete_global_model(litellm_model: str):
 
 
 def get_api_key_for_model(litellm_model: str) -> str:
-    """Returns the stored API key for a model (used internally by router)."""
+    """Returns the decrypted API key for a model (used internally by router)."""
+    from src.utils.crypto import decrypt_secret
     with get_db_connection() as conn:
         c = conn.cursor()
         c.execute('SELECT api_key FROM global_models WHERE litellm_model=?', (litellm_model,))
         row = c.fetchone()
-        return row['api_key'] if row else None
+        return decrypt_secret(row['api_key']) if row and row['api_key'] else None
+
+
+def get_api_key_for_provider(provider: str) -> str:
+    """
+    Returns any decrypted API key saved for a provider, regardless of which
+    exact model string it was saved against. Lets a single "save my Groq key"
+    action cover every Groq model used across every config, instead of
+    requiring the same key to be re-entered per model string.
+    """
+    from src.utils.crypto import decrypt_secret
+    with get_db_connection() as conn:
+        c = conn.cursor()
+        c.execute(
+            "SELECT api_key FROM global_models WHERE provider=? "
+            "AND api_key IS NOT NULL AND api_key != '' LIMIT 1",
+            (provider,)
+        )
+        row = c.fetchone()
+        return decrypt_secret(row['api_key']) if row and row['api_key'] else None

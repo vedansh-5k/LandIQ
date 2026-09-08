@@ -24,9 +24,12 @@ ChromaDB:
 """
 
 import os
+import threading
 from langchain_community.vectorstores import Chroma
 from langchain_community.embeddings import SentenceTransformerEmbeddings
 from src.utils.config import CHROMA_DB_PATH, EMBEDDING_MODEL
+
+_LOAD_LOCK = threading.Lock()
 
 
 def get_embeddings() -> SentenceTransformerEmbeddings:
@@ -72,7 +75,13 @@ def create_vectorstore(chunks: list) -> Chroma:
 
     print(f"Vectorstore created and saved to {CHROMA_DB_PATH}")
     print(f"Total vectors stored: {len(chunks)}")
+
+    global _LOADED_VECTORSTORE
+    _LOADED_VECTORSTORE = vectorstore
     return vectorstore
+
+
+_LOADED_VECTORSTORE = None  # process-wide singleton, see load_vectorstore()
 
 
 def load_vectorstore() -> Chroma | None:
@@ -81,20 +90,44 @@ def load_vectorstore() -> Chroma | None:
 
     Returns None if no vectorstore exists yet.
     This avoids rebuilding every time the app starts.
+
+    Cached at module level after the first successful load: every one of the
+    10+ agents on the Langflow path calls get_rag_context() -> here on its
+    own HTTP request, and reloading the SentenceTransformer model plus
+    reopening the persisted Chroma DB from scratch on every single call was
+    real, avoidable overhead stacking on top of every agent's LLM call -
+    contributing to agents timing out under load. The underlying files never
+    change during a run, so loading once per process and reusing it is safe.
+
+    The orchestrator now dispatches 2 agents concurrently per layer (see
+    LandIQOrchestrator's ThreadPoolExecutor), so two threads could both see
+    the cache empty and race to open the same on-disk Chroma DB at once -
+    observed as "Could not connect to tenant default_tenant" under load.
+    _LOAD_LOCK makes that double-checked-locking safe: only one thread ever
+    actually opens the DB, the other just waits and reuses the result.
     """
-    if not os.path.exists(CHROMA_DB_PATH):
-        print("No existing vectorstore found")
-        return None
+    global _LOADED_VECTORSTORE
+    if _LOADED_VECTORSTORE is not None:
+        return _LOADED_VECTORSTORE
 
-    embeddings = get_embeddings()
+    with _LOAD_LOCK:
+        if _LOADED_VECTORSTORE is not None:
+            return _LOADED_VECTORSTORE
 
-    vectorstore = Chroma(
-        persist_directory=CHROMA_DB_PATH,
-        embedding_function=embeddings
-    )
+        if not os.path.exists(CHROMA_DB_PATH):
+            print("No existing vectorstore found")
+            return None
 
-    print(f"Loaded existing vectorstore from {CHROMA_DB_PATH}")
-    return vectorstore
+        embeddings = get_embeddings()
+
+        vectorstore = Chroma(
+            persist_directory=CHROMA_DB_PATH,
+            embedding_function=embeddings
+        )
+
+        print(f"Loaded existing vectorstore from {CHROMA_DB_PATH}")
+        _LOADED_VECTORSTORE = vectorstore
+        return vectorstore
 
 
 def get_or_create_vectorstore(chunks: list = None) -> Chroma | None:

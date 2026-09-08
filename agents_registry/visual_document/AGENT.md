@@ -5,6 +5,7 @@ description: Reads screenshot-based visual retrieval (PixelRAG) over land/market
 temperature: 0.2
 layer: 1
 accepts_images: true
+model_tier: fast
 output_fields:
   - {name: visual_evidence_found, type: str, description: "YES/NO — did the visual index return relevant document tiles for this property"}
   - {name: source_documents, type: str, description: "Which specific documents/pages the evidence came from (by name/id), so findings are traceable"}

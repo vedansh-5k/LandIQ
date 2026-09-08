@@ -19,6 +19,16 @@ import logging
 from pathlib import Path
 from typing import Optional
 
+# Some Windows consoles default to the cp1252 codepage, which can't encode
+# the emoji used in status prints below and crashes the whole process on
+# import before uvicorn ever starts. Force UTF-8 stdout/stderr so this runs
+# the same regardless of the launching terminal's codepage.
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
+
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -406,6 +416,27 @@ async def on_startup():
     await loop.run_in_executor(None, _try_load_student_code)
 
 
+def _open_browser_when_ready(port, path="/docs", timeout=120):
+    import socket
+    import threading
+    import time
+    import webbrowser
+
+    def _wait():
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            try:
+                with socket.create_connection(("127.0.0.1", port), timeout=1):
+                    break
+            except OSError:
+                time.sleep(1)
+        else:
+            return
+        webbrowser.open(f"http://localhost:{port}{path}")
+
+    threading.Thread(target=_wait, daemon=True).start()
+
+
 if __name__ == "__main__":
     print("\n" + "=" * 60)
     print("  LandIQ Guardrail Server — Student DeBERTa Integration")
@@ -414,4 +445,5 @@ if __name__ == "__main__":
     print("  Health : http://localhost:8002/health")
     print("  Docs   : http://localhost:8002/docs")
     print("=" * 60 + "\n")
+    _open_browser_when_ready(8002, "/docs")
     uvicorn.run("guardrail_server:app", host="0.0.0.0", port=8002, reload=False)

@@ -236,13 +236,14 @@ def _extract_text(data):
     return text
 
 
-async def run_langflow(query, tweaks=None, timeout=300):
+async def run_langflow(query, tweaks=None, timeout=600):
     """Async - send a query to Langflow. Returns dict or None (triggers fallback).
 
-    timeout defaults to 300s: the flow runs 10 agents sequentially via
-    /run-single-agent, and Groq free-tier rate-limit backoff can add
-    12-20s per agent on top of the 3-5s the call itself takes, so a
-    full run can take 180s+.
+    timeout defaults to 600s as a safety margin: the flow runs up to 10
+    agents via /run-single-agent, and even with a working primary model
+    (no failed-then-fallback double call) that's still real LLM latency
+    stacked across every agent. 600s gives real headroom without letting a
+    genuinely hung run block forever.
     """
     base = get_base_url()
     flow_id = get_flow_id()

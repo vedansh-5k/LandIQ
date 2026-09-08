@@ -58,8 +58,9 @@ def _tc_call(fn_name, *args):
 
 DEFAULT_PLAN = {
     "layers": [
-        ["location", "legal", "financial", "market", "environmental_risk"],
+        ["location", "legal", "financial", "market", "environmental_risk", "visual_document"],
         ["bull", "bear", "area_crowd"],
+        ["bull_rebuttal", "bear_rebuttal"],
         ["due_diligence"],
         ["senior_consultant"],
     ]
@@ -75,6 +76,7 @@ RULES:
 - Same list = parallel execution
 - location/legal/financial/market are independent -> Layer 1
 - bull/bear need Layer 1 results -> Layer 2
+- bull_rebuttal/bear_rebuttal need BOTH bull and bear results to directly rebut each other -> Layer 3, after bull/bear, before due_diligence (bull_rebuttal reads bear's output and vice versa — they must not run in the same layer as bull/bear)
 - due_diligence needs everything -> near end
 - senior_consultant ALWAYS last, alone
 - Only include agents from the user's selection (or all if "all")
@@ -220,6 +222,13 @@ def _merge(results, out):
     if not isinstance(out, dict):
         return
     for k, v in out.items():
+        if k == "completed_agents":
+            for name in (v if isinstance(v, list) else [v]):
+                try:
+                    from src.utils import run_progress
+                    run_progress.agent_done(name)
+                except Exception:
+                    pass
         if k in ("completed_agents", "error_log") and k in results:
             results[k] = results[k] + (v if isinstance(v, list) else [v])
         else:
@@ -241,14 +250,23 @@ def _run_layer(agent_names, state):
         _factory_tls.external_base   = _ext_base
         _factory_tls.force_local     = _force
 
+    def _report(out):
+        try:
+            from src.utils import run_progress
+            for name in out.get("completed_agents", []):
+                run_progress.agent_done(name)
+        except Exception:
+            pass
+        return out
+
     if len(agent_names) == 1:
         _propagate()
         try:
-            return run_dynamic_agent(agent_names[0], state)
+            return _report(run_dynamic_agent(agent_names[0], state))
         except Exception as e:
             print("  [AGENT ERROR] %s: %s" % (agent_names[0], str(e)[:100]))
-            return {"error_log": ["%s failed: %s" % (agent_names[0], str(e)[:140])],
-                    "completed_agents": ["%s (Failed)" % agent_names[0]]}
+            return _report({"error_log": ["%s failed: %s" % (agent_names[0], str(e)[:140])],
+                    "completed_agents": ["%s (Failed)" % agent_names[0]]})
 
     results = {}
 
@@ -262,7 +280,13 @@ def _run_layer(agent_names, state):
             return {"error_log": ["%s failed: %s" % (name, str(e)[:140])],
                     "completed_agents": ["%s (Failed)" % name]}
 
-    # 2 workers, 4s stagger -> stays under Groq free-tier TPM
+    # 2 workers, 4s stagger -> stays under Groq free-tier TPM. Tried 4
+    # workers / 1s stagger to chase a faster total runtime — measured result
+    # was WORSE (381.8s vs the pace this config was tuned for), because it
+    # tripped real 429s (location, legal, visual_document x2, bear,
+    # bear_rebuttal in one run) and every retry's backoff wait cost more
+    # than the concurrency gained. Real Groq rate limit is the actual
+    # bottleneck here, not raw per-call latency — reverted.
     ex = ThreadPoolExecutor(max_workers=min(2, len(agent_names)))
     try:
         futures = {ex.submit(run_one, n, i * 4.0): n
@@ -307,6 +331,12 @@ def run_dynamic_advisor(user_inputs):
     session_start = time.time()
     start_clock = time.strftime("%H:%M:%S")
     _tc_call("reset_token_report")
+
+    try:
+        from src.utils import run_progress
+        run_progress.reset()
+    except Exception:
+        pass
 
     try:
         from src.utils.headroom_bridge import reset_manual_session
@@ -408,6 +438,11 @@ def run_dynamic_advisor(user_inputs):
         "total_agents": sum(len(l) for l in plan["layers"]),
         "total_layers": len(plan["layers"]),
     }
+    try:
+        from src.utils import run_progress
+        run_progress.set_plan(plan["layers"], plan["source"])
+    except Exception:
+        pass
 
     # ── 3/3: Execute ─────────────────────────────────────────────────
     print("\n  [3/3] Executing %d layers (plan=%s)..."
@@ -432,6 +467,11 @@ def run_dynamic_advisor(user_inputs):
                       % (i, _hr_before, _hr_after, _hr_pct))
 
         print("\n  [Layer %d] %s" % (i, layer))
+        try:
+            from src.utils import run_progress
+            run_progress.start_layer(i - 1, layer)
+        except Exception:
+            pass
         t0 = time.time()
         try:
             out = _run_layer(layer, state)
@@ -499,5 +539,11 @@ def run_dynamic_advisor(user_inputs):
     if errors:
         print("# Errors: %s" % errors)
     print("#" * 55 + "\n")
+
+    try:
+        from src.utils import run_progress
+        run_progress.finish("done")
+    except Exception:
+        pass
 
     return state

@@ -17,14 +17,21 @@ NOTHING BREAKS:
 - All existing api.py routes still work
 """
 
+import os
+
 _config = {
     "active_id": "groq-llama",
     "llms": [
         {
             "id": "groq-llama",
-            "name": "Llama 3.3 70B",
+            "name": "Groq Llama/GPT-OSS",
             "provider": "groq",
-            "model": "llama-3.3-70b-versatile",
+            # Groq decommissioned llama-3.3-70b-versatile — this used to be a
+            # hardcoded literal here, silently diverging from GROQ_MODEL in
+            # .env (which a previous fix already pointed at the live model)
+            # and breaking every agent with a 404. Reading it from the same
+            # env var closes that gap for good instead of drifting again.
+            "model": os.environ.get("GROQ_MODEL", "openai/gpt-oss-120b"),
             "priority": 1,
             "enabled": True,
             "daily_limit": 100000,

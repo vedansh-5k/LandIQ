@@ -2,6 +2,22 @@
 api.py  — LandIQ v3
 """
 
+import sys
+
+# Some Windows consoles default to the cp1252 codepage, which can't encode
+# characters LLM output routinely contains (en-dashes, arrows, non-breaking
+# hyphens, emoji). A crash while printing one of those — e.g. the Langflow
+# debug preview of a model's own response text — was getting caught by the
+# broad except around the Langflow attempt and silently discarded a
+# perfectly good result, falling back to the local orchestrator instead.
+# Force UTF-8 stdout/stderr so printing real model output never crashes the
+# request regardless of the launching terminal's codepage.
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
+
 import os
 import time
 import logging
@@ -181,6 +197,10 @@ class GlobalModelCreate(BaseModel):
     api_base: Optional[str] = None
 
 
+class ProviderCredentialSave(BaseModel):
+    api_key: str
+
+
 class CreateConfigRequest(BaseModel):
     usecase_name: str
     config_name: str
@@ -200,6 +220,10 @@ class TestBoardRequest(BaseModel):
     prompt: str = "Say hello and state your model name."
     max_tokens: int = 100
     temperature: float = 0.3
+
+
+class SetAgentLLMConfigRequest(BaseModel):
+    full_name: str
 
 
 class OutputFieldDef(BaseModel):
@@ -403,10 +427,11 @@ def catalog_providers():
 def list_pool_models():
     try:
         from src.utils.db import get_global_models
+        # get_global_models() already computes has_api_key and strips the raw
+        # key from each row — doing it again here just re-read the (now
+        # missing) "api_key" field as None, silently flipping every row back
+        # to has_api_key: false regardless of what was actually saved.
         models = get_global_models()
-        for m in models:
-            m["has_api_key"] = bool(m.get("api_key"))
-            m.pop("api_key", None)
         return models
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -428,6 +453,53 @@ def remove_pool_model(litellm_model: str):
         from src.utils.db import delete_global_model
         delete_global_model(litellm_model)
         return {"status": "removed"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ── CURATED PROVIDERS (friendly picker for the Configure LLM screen) ───────
+
+@app.get("/catalog/providers/curated")
+def curated_providers():
+    """A short, human-friendly provider list (with is_configured status),
+    on top of the full ~2,250-model /catalog/providers dump above."""
+    try:
+        from src.utils.provider_directory import get_curated_providers
+        return {"providers": get_curated_providers()}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/catalog/providers/curated/{provider_id}")
+def curated_provider_detail(provider_id: str):
+    try:
+        from src.utils.provider_directory import get_provider
+        provider = get_provider(provider_id)
+        if not provider:
+            raise HTTPException(status_code=404, detail="Provider not found")
+        return provider
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/catalog/providers/curated/{provider_id}/credentials")
+def save_provider_credential(provider_id: str, req: ProviderCredentialSave):
+    """Save one API key for a provider — every model from that provider
+    (in any config) picks it up automatically via get_api_key_for_provider(),
+    so the user configures a provider once instead of per model."""
+    try:
+        from src.utils.provider_directory import BASE_PROVIDERS
+        from src.utils.db import add_global_model
+        info = BASE_PROVIDERS.get(provider_id)
+        if not info:
+            raise HTTPException(status_code=404, detail="Provider not found")
+        if not req.api_key or not req.api_key.strip():
+            raise HTTPException(status_code=400, detail="api_key is required.")
+        for model_string in info["default_models"]:
+            add_global_model(model_string, provider_id, req.api_key.strip(), None)
+        return {"status": "ok", "provider": provider_id, "models_updated": info["default_models"]}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -538,6 +610,33 @@ def edit_config(full_name: str, req: UpdateConfigRequest):
         raise HTTPException(status_code=404 if "not found" in str(e).lower() else 500, detail=str(e))
 
 
+# ── AGENT CONFIG (Config 2 — binds one agent to a Config-1 LLM config) ──────
+
+@app.get("/agent-config")
+def agent_config_status():
+    from src.utils.agent_configurator import get_status
+    return get_status()
+
+@app.post("/agent-config/{agent_name}/set-llm-config")
+def agent_config_set_llm(agent_name: str, req: SetAgentLLMConfigRequest):
+    from src.utils.agent_configurator import _agent_config, set_config_full_name
+    from src.utils.config_store import get_config
+    if agent_name not in _agent_config:
+        raise HTTPException(status_code=404, detail=f"Unknown agent '{agent_name}'.")
+    if not get_config(req.full_name):
+        raise HTTPException(status_code=404, detail=f"Config '{req.full_name}' not found.")
+    set_config_full_name(agent_name, req.full_name)
+    return {"agent": agent_name, "config_full_name": req.full_name}
+
+@app.post("/agent-config/{agent_name}/clear-llm-config")
+def agent_config_clear_llm(agent_name: str):
+    from src.utils.agent_configurator import _agent_config, set_config_full_name
+    if agent_name not in _agent_config:
+        raise HTTPException(status_code=404, detail=f"Unknown agent '{agent_name}'.")
+    set_config_full_name(agent_name, None)
+    return {"agent": agent_name, "config_full_name": None}
+
+
 # ── TEST BOARD ─────────────────────────────────────────────────────────────
 
 @app.post("/test/{full_name}")
@@ -558,6 +657,14 @@ async def test_board(full_name: str, req: TestBoardRequest):
             model=f"{full_name}::chat",
             messages=[{"role": "user", "content": req.prompt}],
             max_tokens=req.max_tokens, temperature=req.temperature,
+            # Reasoning models (e.g. groq/openai/gpt-oss-120b) spend part of
+            # max_tokens on invisible chain-of-thought before writing the
+            # visible answer — on a small max_tokens budget that reasoning
+            # alone can consume the whole budget, leaving content empty even
+            # though the call "succeeded". low keeps most of the budget free
+            # for the actual answer; confirmed harmless on Gemini too (extra
+            # params it doesn't use are silently ignored).
+            reasoning_effort="low",
         )
         latency_ms = (time.time() - start_ts) * 1000
         model_used = getattr(resp, "model", "unknown")
@@ -570,9 +677,10 @@ async def test_board(full_name: str, req: TestBoardRequest):
         end_dt = datetime.now(timezone.utc)
         log_usage(full_name, "test_board", "/test", model_used, pt, ct, tt, latency_ms, True, None,
                   cost_usd=cost, start_time=start_dt.isoformat(), end_time=end_dt.isoformat())
-        return {"success": True, "model_used": model_used, "response": text,
+        return {"success": True, "model_used": model_used, "config": full_name, "response": text,
                 "prompt_tokens": pt, "completion_tokens": ct, "total_tokens": tt,
-                "latency_ms": round(latency_ms, 1), "estimated_cost_usd": round(cost, 6)}
+                "latency_ms": round(latency_ms, 1), "estimated_cost_usd": round(cost, 6),
+                "start_time": start_dt.isoformat(), "end_time": end_dt.isoformat()}
     except Exception as e:
         latency_ms = (time.time() - start_ts) * 1000
         end_dt = datetime.now(timezone.utc)
@@ -1055,8 +1163,40 @@ def _apply_guardrails_to_obj(obj: Any, mode: str) -> Any:
         return {k: _apply_guardrails_to_obj(v, mode) for k, v in obj.items()}
     return obj
 
+# Guards against overlapping analysis runs. A slow/loading page made it easy
+# to click "Analyse" more than once (or reload and resubmit), and each click
+# fired a FULL separate 10-11 agent pipeline concurrently - multiplying load
+# on the same tight Groq/Gemini quota and making every run slower for
+# everyone. One analysis at a time, server-side, regardless of how the
+# duplicate request arrived (double-click, multiple tabs, a stale reload).
+_analysis_in_progress = {"active": False}
+
+
+@app.get("/analyse/progress")
+def analyse_progress():
+    """Real-time status of the currently running /analyse call, for the
+    frontend's loading screen to poll instead of showing a canned cycling
+    message. Cheap, read-only, safe to poll every second or two."""
+    from src.utils import run_progress
+    return run_progress.get()
+
+
 @app.post("/analyse")
 async def analyse_land(req: LandQueryRequest):
+    if _analysis_in_progress["active"]:
+        raise HTTPException(
+            status_code=429,
+            detail="An analysis is already running. Please wait for it to finish before starting another - "
+                   "running two at once multiplies API load and slows both down.",
+        )
+    _analysis_in_progress["active"] = True
+    try:
+        return await _analyse_land_inner(req)
+    finally:
+        _analysis_in_progress["active"] = False
+
+
+async def _analyse_land_inner(req: LandQueryRequest):
     session_start = time.time()
     def _safe_dump(obj):
         if obj is None: return None
@@ -1121,7 +1261,13 @@ async def analyse_land(req: LandQueryRequest):
                 _lf_flow_id = get_flow_id()
                 if is_langflow_running() and _lf_flow_id:
                     print(f"  [LANGFLOW] Attempting via flow {_lf_flow_id}...")
-                    _lf_result = await run_langflow(_json.dumps(user_inputs), timeout=300)
+                    # The LandIQ Orchestrator node reads the real property query from
+                    # its own query_input field, injected here via Langflow's tweaks
+                    # API - the node's own default value ("{}") is never used for a
+                    # real run. Without this, the orchestrator would have no way to
+                    # know what property is actually being analysed.
+                    _lf_tweaks = {"LandIQOrchestrator-1": {"query_input": _json.dumps(user_inputs)}}
+                    _lf_result = await run_langflow(_json.dumps(user_inputs), tweaks=_lf_tweaks, timeout=600)
                     _lf_parsed = None
                     if _lf_result and _lf_result.get("response"):
                         _lf_text = _lf_result["response"]
@@ -1204,16 +1350,30 @@ async def analyse_land(req: LandQueryRequest):
     bull = final_state.get("bull_output")
     bear = final_state.get("bear_output")
     dd   = final_state.get("due_diligence_output")
+    env  = final_state.get("environmental_risk_output")
+    vis  = final_state.get("visual_document_output")
+    crowd = final_state.get("area_crowd_output")
+    bull_reb = final_state.get("bull_rebuttal_output")
+    bear_reb = final_state.get("bear_rebuttal_output")
     rec  = final_state.get("final_recommendation")
     tokens = final_state.get("token_report", {})
     if not tokens:
         completed = final_state.get("completed_agents", [])
         tokens = {"total_llm_calls": len(completed)}
 
+    # Every name here is loaded from agents_registry/ the same way as any
+    # other agent — this list exists only to distinguish the pre-built
+    # specialist roster from an agent someone actually creates at runtime
+    # via the "+ New Agent" UI. Was missing environmental_risk/visual_document/
+    # area_crowd/bull_rebuttal/bear_rebuttal, so the results view was
+    # tagging LandIQ's own shipped agents as "NEW ✨" — misleading, not a
+    # real distinction. Keep in sync with the frontend's own CORE set.
     CORE_OUTPUT_KEYS = {
         "location_output","legal_output","financial_output","market_output",
         "bull_output","bear_output","due_diligence_output",
         "final_recommendation","senior_consultant_output",
+        "environmental_risk_output","visual_document_output","area_crowd_output",
+        "bull_rebuttal_output","bear_rebuttal_output",
         "token_report","completed_agents","error_log","rag_context",
     }
     dynamic_outputs = {}
@@ -1237,6 +1397,11 @@ async def analyse_land(req: LandQueryRequest):
     bull_d = _safe_dump(bull)
     bear_d = _safe_dump(bear)
     dd_d   = _safe_dump(dd)
+    env_d  = _safe_dump(env)
+    vis_d  = _safe_dump(vis)
+    crowd_d = _safe_dump(crowd)
+    bull_reb_d = _safe_dump(bull_reb)
+    bear_reb_d = _safe_dump(bear_reb)
     rec_d  = _safe_dump(rec)
 
     # Apply output guardrails if configured
@@ -1249,6 +1414,11 @@ async def analyse_land(req: LandQueryRequest):
         bull_d = _apply_guardrails_to_obj(bull_d, mode)
         bear_d = _apply_guardrails_to_obj(bear_d, mode)
         dd_d   = _apply_guardrails_to_obj(dd_d, mode)
+        env_d  = _apply_guardrails_to_obj(env_d, mode)
+        vis_d  = _apply_guardrails_to_obj(vis_d, mode)
+        crowd_d = _apply_guardrails_to_obj(crowd_d, mode)
+        bull_reb_d = _apply_guardrails_to_obj(bull_reb_d, mode)
+        bear_reb_d = _apply_guardrails_to_obj(bear_reb_d, mode)
         rec_d  = _apply_guardrails_to_obj(rec_d, mode)
         dynamic_outputs = _apply_guardrails_to_obj(dynamic_outputs, mode)
 
@@ -1269,6 +1439,11 @@ async def analyse_land(req: LandQueryRequest):
         "bull_case":      bull_d,
         "bear_case":      bear_d,
         "due_diligence":  dd_d,
+        "environmental_risk": env_d,
+        "visual_document":    vis_d,
+        "area_crowd":         crowd_d,
+        "bull_rebuttal":      bull_reb_d,
+        "bear_rebuttal":      bear_reb_d,
         "recommendation": rec_d,
         "completed_agents": final_state.get("completed_agents", []),
         "errors":           final_state.get("error_log", []),
@@ -2357,6 +2532,28 @@ def pixelrag_build_status():
 # ══════════════════════════════════════════════════════
 
 
+def _open_browser_when_ready(port, path="/", timeout=90):
+    import socket
+    import threading
+    import time
+    import webbrowser
+
+    def _wait():
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            try:
+                with socket.create_connection(("127.0.0.1", port), timeout=1):
+                    break
+            except OSError:
+                time.sleep(1)
+        else:
+            return
+        webbrowser.open(f"http://localhost:{port}{path}")
+
+    threading.Thread(target=_wait, daemon=True).start()
+
+
 if __name__ == "__main__":
     import uvicorn
+    _open_browser_when_ready(8000, "/")
     uvicorn.run(app, host="0.0.0.0", port=8000)

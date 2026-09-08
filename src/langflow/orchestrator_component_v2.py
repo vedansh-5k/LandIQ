@@ -208,7 +208,7 @@ class LandIQOrchestrator(Component):
                     "https://api.groq.com/openai/v1/chat/completions",
                     headers={"Authorization": f"Bearer {groq_key}", "Content-Type": "application/json"},
                     json={
-                        "model": "llama-3.3-70b-versatile",
+                        "model": env_vars.get("GROQ_MODEL", os.environ.get("GROQ_MODEL", "openai/gpt-oss-120b")),
                         "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
                         "temperature": 0.1, "max_tokens": 500,
                     },

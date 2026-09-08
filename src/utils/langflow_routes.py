@@ -202,7 +202,6 @@ async def run_single_agent(request: Request):
     state.pop("agent_name", None)
     if not state.get("area"):
         state["area"] = body.get("location", "")
-    state.setdefault("rag_context", "No context available.")
     state.setdefault("completed_agents", [])
     state.setdefault("error_log", [])
 
@@ -214,6 +213,36 @@ async def run_single_agent(request: Request):
             prev = {}
     if isinstance(prev, dict):
         state.update(prev)
+
+    # Individual Langflow canvas nodes (Agent_<name>) call this endpoint
+    # directly with only property_data/prompt/llm/skill - none of them
+    # carry real RAG context or PixelRAG visual evidence, so every agent
+    # was silently running ungrounded. Fetch both here, once, server-side,
+    # so every caller of this endpoint gets the same real grounding the
+    # local orchestrator path already has - no canvas rewiring needed.
+    if not (state.get("rag_context") or "").strip() or state["rag_context"] == "No context available.":
+        try:
+            from src.rag.retriever import get_rag_context, build_land_query
+            query = build_land_query(state)
+            state["rag_context"] = await _off(get_rag_context, query)
+        except Exception as e:
+            logger.warning("rag_context fetch failed for %s: %s", agent_name, str(e)[:150])
+            state.setdefault("rag_context", "No context available.")
+
+    if not state.get("visual_evidence"):
+        try:
+            from src.agents.dynamic_agent import _load_agent
+            agent_meta = _load_agent(agent_name)
+            if agent_meta and agent_meta.get("accepts_images"):
+                from src.utils.pixelrag_bridge import search as pixelrag_search
+                query = "%s %s %s %s land" % (
+                    state.get("area", ""), state.get("city", ""),
+                    state.get("state", ""), state.get("land_type", ""))
+                hits = await _off(pixelrag_search, query, 4, True)
+                if hits:
+                    state["visual_evidence"] = hits
+        except Exception as e:
+            logger.warning("visual_evidence fetch failed for %s: %s", agent_name, str(e)[:150])
 
     try:
         from src.agents.dynamic_agent import run_dynamic_agent

@@ -116,7 +116,7 @@ FLOW_DATA = {
                             },
                             "model_name": {
                                 "type": "str",
-                                "value": "llama-3.3-70b-versatile",
+                                "value": os.environ.get("GROQ_MODEL", "openai/gpt-oss-120b"),
                                 "display_name": "Model Name",
                             },
                             "temperature": {

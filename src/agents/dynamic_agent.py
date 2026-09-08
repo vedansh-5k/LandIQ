@@ -25,16 +25,35 @@ import re
 import time
 from pathlib import Path
 
+from src.rag.facts_store import get_structured_facts, format_structured_facts_block
+
 logger = logging.getLogger(__name__)
+
+# Must match src/rag/retriever.py's own fallback strings exactly — these are
+# what get_rag_context() returns when there's genuinely nothing retrieved.
+# _build_prompt() checks for them so that case gets an honest instruction
+# instead of the sentinel string being silently embedded as if it were content.
+NO_CONTEXT_SENTINELS = {
+    "No context available.",
+    "No relevant context found.",
+    "No RAG context available.",
+}
 
 # Printed once at import. If this line does NOT appear when the server boots,
 # the old dynamic_agent.py is still the file being imported.
 print("[dynamic_agent] token accounting v2 loaded")
 
 # ── Tuning knobs (keep small → stay under Groq free-tier TPM) ─────────────────
-MAX_OUT_TOKENS = 800     # per-agent completion cap
-RAG_CAP        = 1500    # chars of RAG context injected
-PRIOR_CAP      = 2000    # chars of prior-agent findings injected (fixes "too large")
+# 800 was clipping most agents mid-JSON (output regularly hit the cap exactly),
+# which broke JSON parsing and fell back to a truncated raw_output blob. 1600
+# still clipped verbose agents (e.g. Financial, which reasons through several
+# numeric scenarios). Raised to 3000 as the ceiling for configs with headroom;
+# _resolve_max_out_tokens() below clamps back down for any config (e.g. an
+# external gateway config) that declares a tighter tpr restriction, so this
+# never overshoots a real cap — land_plus's own 4096 tpr still leaves margin.
+MAX_OUT_TOKENS = 3000    # per-agent completion cap (ceiling; see _resolve_max_out_tokens)
+RAG_CAP        = 2200    # chars of RAG context injected (k bumped 4->6 in retriever.py, cap raised to match)
+PRIOR_CAP      = 3000    # chars of prior-agent findings injected (raised: bull_rebuttal/bear_rebuttal add 2 more agents feeding due_diligence/senior_consultant)
 FIELD_CAP      = 120     # chars per prior field
 
 
@@ -133,6 +152,10 @@ def _load_agent(name):
         # flag — it is never checked by agent name, so adding a second
         # image-reading agent later needs zero code changes here.
         "accepts_images": str(meta.get("accepts_images", "false")).strip().lower() == "true",
+        # Same pattern for model_tier: "fast" routes this agent to a smaller
+        # Groq model with its own rate-limit bucket (see llm_factory.py).
+        # Unset -> normal default model, same as before this existed.
+        "model_tier": (meta.get("model_tier", "") or "").strip().lower() or None,
     }
 
 
@@ -182,19 +205,48 @@ def _build_prompt(agent, state):
     prior   = _prior_outputs(state, agent["name"])
     schema  = _output_schema(agent["output_fields"])
 
+    if rag in NO_CONTEXT_SENTINELS:
+        rag_section = (
+            "NO KNOWLEDGE BASE DATA WAS RETRIEVED for this location. The line above "
+            "is a system status message, not content — do not quote it or treat it as "
+            "a finding. You MUST explicitly disclose in your output that no report data "
+            "was found for %s, %s, and label any figure you give as a general estimate, "
+            "not verified data." % (area, city)
+        )
+    else:
+        rag_section = rag[:RAG_CAP]
+
+    try:
+        structured_facts = get_structured_facts(area, city, st)
+        facts_section = format_structured_facts_block(structured_facts) or (
+            "No verified structured facts recorded for %s, %s yet — treat this tier as empty "
+            "and fall through to KNOWLEDGE BASE (RAG), then general knowledge if needed." % (area, city)
+        )
+    except Exception as e:
+        logger.warning("[facts_store] lookup failed: %s", str(e)[:100])
+        facts_section = "Structured facts lookup unavailable this run — fall through to KNOWLEDGE BASE (RAG)."
+
     system = (
         "You are %s of LandIQ — Indian land investment advisory AI.\n\n"
         "%s\n\n"
         "ACCURACY RULES (MANDATORY):\n"
         "1. LOCATION-SPECIFIC: Every finding must reference %s, %s explicitly.\n"
-        "2. USE RAG CONTEXT: The knowledge base is your primary data source. Cite facts from it.\n"
-        "3. NO HALLUCINATION: If no data for %s, say 'Limited data for %s — based on %s trends:' then give conditional analysis.\n"
+        "2. PRIORITY ORDER FOR FACTS — never mix these tiers silently:\n"
+        "   (a) STRUCTURED FACTS section below — verified, sourced, dated numbers. If present, use them "
+        "EXACTLY as given and name the source.\n"
+        "   (b) KNOWLEDGE BASE (RAG) section — real content retrieved from actual market reports, each "
+        "chunk tagged '[Source: filename]'. Use that number and cite the filename.\n"
+        "   (c) Only if neither (a) nor (b) covers a point, use your own general Indian real-estate "
+        "knowledge — and you MUST label it as a general estimate, explicitly not verified data.\n"
+        "3. FLAG WHAT'S NOT COVERED: If neither STRUCTURED FACTS nor the KNOWLEDGE BASE covers a specific "
+        "point, say 'Limited data for %s — based on %s trends:' then give conditional analysis. Never "
+        "present a general-knowledge estimate as if it came from verified data.\n"
         "4. REAL NUMBERS: Actual INR prices, actual %%, actual km. Never say 'moderate' without a number.\n"
         "5. NO GENERIC ADVICE: Never write 'low risk is good'. Give THIS property's specifics.\n"
         "6. CHAIN FINDINGS: Read prior agent outputs and reference their specific findings.\n"
         "7. BE CONCISE: Each field 2-3 tight sentences max. No filler.\n"
         "8. JSON ONLY: Respond with ONLY valid JSON. No preamble, no explanation."
-    ) % (agent["display_name"], agent["role_text"], area, city, area, area, city)
+    ) % (agent["display_name"], agent["role_text"], area, city, area, city)
 
     loan_str = "Rs.%s @ %.1f%%" % ("{:,.0f}".format(loan_a), loan_r) if loan else "None"
     human = (
@@ -204,6 +256,7 @@ def _build_prompt(agent, state):
         "Purpose  : %s | Timeline: %s yr | Risk: %s\n"
         "Title    : %s | Loan: %s\n"
         "Income   : Rs.%s/month expected\n\n"
+        "STRUCTURED FACTS (VERIFIED — highest priority):\n%s\n\n"
         "KNOWLEDGE BASE (RAG):\n%s\n\n"
         "PRIOR AGENT FINDINGS:\n%s\n\n"
         "YOUR WORKFLOW:\n%s\n\n"
@@ -212,7 +265,7 @@ def _build_prompt(agent, state):
          "{:,.0f}".format(budget), "{:,.0f}".format(con_b),
          purpose, timeline, risk,
          "YES" if deed else "NO (HIGH RISK)", loan_str,
-         "{:,.0f}".format(inc_e), rag[:RAG_CAP], prior,
+         "{:,.0f}".format(inc_e), facts_section, rag_section, prior,
          (agent["skill_steps"] or "")[:1200], area, city, schema)
 
     return system, human
@@ -319,6 +372,30 @@ def _is_rate_limit_error(e):
     return "429" in msg or "rate limit" in msg or "rate_limit" in msg
 
 
+def _resolve_max_out_tokens():
+    """MAX_OUT_TOKENS is a ceiling, not a fixed value — clamp it down to
+    whatever the active LLM config actually allows so an external gateway
+    config with a tight tpr restriction (e.g. doc_summariser_LLM_config's
+    1000) never gets over-sent, while configs with headroom (e.g. land_plus's
+    4096) get the fuller cap instead of everyone being stuck at the tightest
+    config's limit."""
+    try:
+        from src.utils.llm_factory import _tls as _factory_tls
+        ext_cfg = getattr(_factory_tls, "external_config", None)
+        if ext_cfg:
+            from src.utils.llm_factory import _ext_max_tokens
+            return max(200, min(MAX_OUT_TOKENS, _ext_max_tokens(ext_cfg)))
+        local_cfg = getattr(_factory_tls, "selected_config", None)
+        if local_cfg:
+            from src.utils.router_manager import _configs
+            tpr = (_configs.get(local_cfg, {}).get("restrictions") or {}).get("tpr")
+            if isinstance(tpr, (int, float)) and tpr > 0:
+                return max(200, min(MAX_OUT_TOKENS, int(tpr) - 200))
+    except Exception:
+        pass
+    return MAX_OUT_TOKENS
+
+
 def _extract_text(raw):
     """Newer Gemini responses return .content as a list of content blocks
     (e.g. [{"type": "text", "text": "...", "extras": {"signature": "..."}}])
@@ -411,7 +488,7 @@ def run_dynamic_agent(agent_name, state):
                     api_key=os.environ["GROQ_API_KEY"],
                     model=_model_hint or os.environ.get("GROQ_MODEL", "openai/gpt-oss-120b"),
                     temperature=agent["temperature"],
-                    max_tokens=MAX_OUT_TOKENS,
+                    max_tokens=_resolve_max_out_tokens(),
                 )
             elif _provider_hint in ("gemini", "google") and os.environ.get("GOOGLE_API_KEY"):
                 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -467,18 +544,23 @@ def run_dynamic_agent(agent_name, state):
     if llm is None:
         try:
             from src.utils.llm_factory import get_llm_for_agent
-            llm = get_llm_for_agent(agent_name, temperature=agent["temperature"])
+            llm = get_llm_for_agent(agent_name, temperature=agent["temperature"],
+                                     model_tier=agent.get("model_tier"))
         except Exception:
             pass
 
     if llm is None:
         try:
             from langchain_groq import ChatGroq
+            _fallback_model = os.environ.get("GROQ_MODEL", "openai/gpt-oss-120b")
+            if agent.get("model_tier") == "fast":
+                from src.utils.llm_factory import GROQ_FAST_MODEL
+                _fallback_model = GROQ_FAST_MODEL
             llm = ChatGroq(
                 api_key=os.environ.get("GROQ_API_KEY", ""),
-                model=os.environ.get("GROQ_MODEL", "openai/gpt-oss-120b"),
+                model=_fallback_model,
                 temperature=agent["temperature"],
-                max_tokens=MAX_OUT_TOKENS,
+                max_tokens=_resolve_max_out_tokens(),
             )
         except Exception as e:
             llm = None
@@ -511,7 +593,7 @@ def run_dynamic_agent(agent_name, state):
                     bound = llm
                 else:
                     try:
-                        bound = llm.bind(max_tokens=MAX_OUT_TOKENS)
+                        bound = llm.bind(max_tokens=_resolve_max_out_tokens())
                     except Exception:
                         bound = llm
                 raw = bound.invoke([("system", system_prompt), ("human", human_payload)])

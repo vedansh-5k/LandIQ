@@ -1,19 +1,15 @@
 {
-  "usecase_name": "land",
-  "config_name": "plus",
+  "usecase_name": "demo",
+  "config_name": "test1",
   "operations": {
     "chat": [
       {
-        "litellm_model": "groq/openai/gpt-oss-120b",
+        "litellm_model": "gemini/gemini-flash-latest",
         "priority": 1
       },
       {
         "litellm_model": "groq/openai/gpt-oss-20b",
         "priority": 2
-      },
-      {
-        "litellm_model": "gemini/gemini-flash-latest",
-        "priority": 3
       }
     ]
   },
@@ -27,8 +23,8 @@
     "pii_masking": false,
     "profanity_filter": false
   },
-  "full_name": "land_plus",
+  "full_name": "demo_test1",
   "status": "active",
-  "created_at": "2026-06-30T07:18:19.953088+00:00",
-  "updated_at": "2026-09-07T06:08:46.460979+00:00"
+  "created_at": "2026-09-07T05:57:02.912486+00:00",
+  "updated_at": "2026-09-07T06:14:09.924264+00:00"
 }

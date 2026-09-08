@@ -36,6 +36,12 @@ _runtime_keys: dict = {}
 _tls = threading.local()
 
 GROQ_FALLBACK_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
+# Separate Groq model = separate rate-limit bucket. Agents whose AGENT.md sets
+# model_tier: fast use this instead of the main model, so a full run isn't
+# funnelling all 13 agents' requests through one model's RPM ceiling.
+# Verified working on this account 2026-09-04; change via .env if it's ever
+# retired the way llama-3.3-70b-versatile was.
+GROQ_FAST_MODEL = os.getenv("GROQ_FAST_MODEL", "openai/gpt-oss-20b")
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-flash-latest")
 
 
@@ -68,15 +74,13 @@ def _key(env_name, provider):
     key = _runtime_keys.get(provider, "") or os.getenv(env_name, "")
     if not key:
         try:
-            from src.utils.db import get_db_connection
-            with get_db_connection() as conn:
-                row = conn.execute(
-                    "SELECT api_key FROM global_models WHERE provider=? "
-                    "AND api_key IS NOT NULL AND api_key != '' LIMIT 1",
-                    (provider,)).fetchone()
-                if row:
-                    key = row[0]
-                    os.environ[env_name] = key
+            # global_models.api_key is stored encrypted (src/utils/crypto.py) —
+            # go through get_api_key_for_provider() so this gets the real,
+            # decrypted key instead of the Fernet ciphertext.
+            from src.utils.db import get_api_key_for_provider
+            key = get_api_key_for_provider(provider) or ""
+            if key:
+                os.environ[env_name] = key
         except Exception:
             pass
     return key
@@ -423,6 +427,13 @@ class RouterStructuredOutputLLM(RunnableSerializable[Any, Any]):
                     model="%s::chat" % self.config_name, messages=lm,
                     temperature=self.temperature,
                     max_tokens=self.max_tokens or 4096,
+                    # See RouterChatModel._generate for why this matters:
+                    # reasoning models (groq/openai/gpt-oss-*) can spend most
+                    # of max_tokens on invisible reasoning before writing
+                    # content — "low" leaves the budget for the actual
+                    # structured JSON. Confirmed harmless on non-reasoning
+                    # models (e.g. Gemini silently ignores it).
+                    reasoning_effort="low",
                     response_format={"type": "json_object"})
                 content = resp.choices[0].message.content.strip()
                 if content.startswith("```json"):
@@ -464,9 +475,18 @@ class RouterChatModel(BaseChatModel):
     def _generate(self, messages, stop=None, run_manager=None, **kwargs):
         lm = _convert_messages(messages)
         last_err = None
-        for attempt in range(3):
+        # Was 3 attempts with 12/20/30s backoff — on top of litellm's own
+        # Router num_retries AND dynamic_agent.py's own 3x retry + Gemini
+        # fallback (already the proven, tested safety net this session),
+        # that was three uncoordinated retry layers stacking on the same
+        # underlying Groq rate limit, turning one real 429 into minutes of
+        # waiting. One attempt here, then straight to the direct-Groq
+        # fallback below — dynamic_agent.py's own retry loop is what
+        # actually recovers from a transient failure now.
+        for attempt in range(1):
             try:
                 kwargs.pop("max_tokens", None)
+                kwargs.setdefault("reasoning_effort", "low")
                 resp = self.router.completion(
                     model="%s::chat" % self.config_name, messages=lm,
                     temperature=self.temperature,
@@ -478,11 +498,7 @@ class RouterChatModel(BaseChatModel):
                 return ChatResult(generations=[ChatGeneration(message=msg)])
             except Exception as e:
                 last_err = e
-                wait = _backoff(attempt, e)
-                print("  [ROUTER %d/3] %s | wait %ds"
-                      % (attempt + 1, str(e)[:90], wait))
-                if attempt < 2:
-                    time.sleep(wait)
+                print("  [ROUTER] %s -> falling through to direct Groq" % str(e)[:90])
 
         fb = _groq_direct(self.temperature)
         if fb is not None:
@@ -573,10 +589,12 @@ def get_local_fallback_llm(temperature=0.3, schema=None):
     raise RuntimeError("No usable local API key")
 
 
-def get_llm_for_agent(agent_name, temperature=0.3):
+def get_llm_for_agent(agent_name, temperature=0.3, model_tier=None):
+    agent_cfg = {}
     try:
         from src.utils.agent_configurator import get_agent_config
-        final_temp = get_agent_config(agent_name).get("temperature", temperature)
+        agent_cfg = get_agent_config(agent_name)
+        final_temp = agent_cfg.get("temperature", temperature)
     except Exception:
         final_temp = temperature
 
@@ -611,6 +629,25 @@ def get_llm_for_agent(agent_name, temperature=0.3):
         except Exception as e:
             print("  [LLM] Router check failed: %s -> default" % e)
 
+    # agent-level config binding (Config 2 -> Config 1, System B) — only
+    # kicks in when no run-level override (external/selected, above) is
+    # active, and only for the specific agent that has been bound via
+    # agent_configurator.set_config_full_name(). Every agent with no
+    # binding (config_full_name=None, the default for all agents today)
+    # falls straight through to the existing behavior below, unchanged.
+    agent_bound_config = agent_cfg.get("config_full_name") if not forced_local else None
+    if agent_bound_config:
+        try:
+            from src.utils.router_manager import get_router
+            router = get_router(agent_bound_config)
+            if router:
+                print("  [LLM] %s -> agent-config '%s' via Router | temp=%s"
+                      % (agent_name, agent_bound_config, final_temp))
+                return RouterChatModel(router=router, config_name=agent_bound_config,
+                                       temperature=final_temp)
+        except Exception as e:
+            print("  [LLM] Agent-config router check failed: %s -> default" % e)
+
     # normal local
     active = get_active_llm()
     primary_id = active["id"]
@@ -625,6 +662,12 @@ def get_llm_for_agent(agent_name, temperature=0.3):
         model_entry = _by_id(actual_id) or active
     else:
         model_entry = active
+
+    # model_tier: fast (set in the agent's own AGENT.md, not hardcoded here)
+    # -> a separate, smaller Groq model with its own rate-limit bucket, so a
+    # full run isn't funnelling every agent through one model's RPM ceiling.
+    if model_tier == "fast" and model_entry.get("provider") == "groq":
+        model_entry = dict(model_entry, model=GROQ_FAST_MODEL, name=model_entry["name"] + " (fast)")
 
     print("  [LLM] %s -> %s (%s) | temp=%s"
           % (agent_name, model_entry["name"], model_entry["provider"], final_temp))

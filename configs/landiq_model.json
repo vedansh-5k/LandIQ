@@ -1,19 +1,22 @@
 {
-  "usecase_name": "land",
-  "config_name": "plus",
+  "usecase_name": "landiq",
+  "config_name": "model",
   "operations": {
     "chat": [
       {
         "litellm_model": "groq/openai/gpt-oss-120b",
-        "priority": 1
+        "priority": 1,
+        "api_key_env": "GROQ_API_KEY"
       },
       {
         "litellm_model": "groq/openai/gpt-oss-20b",
-        "priority": 2
+        "priority": 2,
+        "api_key_env": "GROQ_API_KEY"
       },
       {
         "litellm_model": "gemini/gemini-flash-latest",
-        "priority": 3
+        "priority": 3,
+        "api_key_env": "GOOGLE_API_KEY"
       }
     ]
   },
@@ -27,8 +30,8 @@
     "pii_masking": false,
     "profanity_filter": false
   },
-  "full_name": "land_plus",
+  "full_name": "landiq_model",
   "status": "active",
-  "created_at": "2026-06-30T07:18:19.953088+00:00",
-  "updated_at": "2026-09-07T06:08:46.460979+00:00"
+  "created_at": "2026-09-07T10:36:46.250890+00:00",
+  "updated_at": "2026-09-08T06:50:45.846165+00:00"
 }

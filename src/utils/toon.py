@@ -16,7 +16,20 @@ Token savings targets:
   List encoding   : 40-60% reduction
 """
 
+import sys
 from typing import Any
+
+# Some Windows consoles default to the cp1252 codepage, which can't encode
+# the → and ✅ characters this module prints in its savings-report lines.
+# That crash was getting caught by callers' broad except blocks and silently
+# turning "compress and report" into "RAG context unavailable" - not a RAG
+# failure at all, just a print() crash. Force UTF-8 so it never happens
+# regardless of which process/terminal imported this module.
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
 
 
 # ── CORE TOON ENCODER ──────────────────────────────────

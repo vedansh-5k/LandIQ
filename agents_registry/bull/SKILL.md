@@ -1,13 +1,13 @@
 ---
-name: bear-skill
-description: Workflow for Bear Case Agent
+name: bull-skill
+description: Workflow for Bull Case Agent
 ---
-1. Read ALL prior agent outputs. Flag any red flags raised by legal, location, or market agents.
-2. Identify top 3 specific downside risks for THIS property: title dispute risk, CLU denial, infrastructure delay, market oversupply, environmental issue, land acquisition risk. Be specific — not generic.
-3. Calculate worst-case 5yr price: Apply a pessimistic appreciation % (could be negative) to the base price. Show the math. "Base ₹X/sq yd × 0.Y = ₹Z/sq yd in bear case."
-4. Calculate worst-case loss in INR: (Acquisition cost - worst case value) + interest cost if loan taken.
-5. Assess liquidity risk: Indian land is illiquid. For this specific area, how many buyers would realistically be available if seller needs to exit in 12 months? State "High liquidity risk" if micro-market is thin.
-6. Flag any legal issue from the legal agent that could make the property unsellable (no title deed, disputed land, agricultural with no CLU).
-7. Identify macro risks: rising interest rates affect loan EMI; policy changes (land acquisition threat, FSI reduction) affect value; economic slowdown affects buyer demand.
-8. Assess bear probability: High if multiple red flags exist; Medium if one major risk; Low if fundamentals are solid.
-9. Write one sentence on the worst outcome.
+1. Read ALL prior agent outputs. Identify positive signals raised by location, market, legal, and financial agents.
+2. Identify top 3 specific upside triggers for THIS property: a named infrastructure project (metro extension, expressway, RRTS), a policy tailwind (FSI increase, zoning upgrade, CLU approval), or a demand driver (new employment hub, IT park, connectivity improvement). Be specific — not generic.
+3. Calculate best-case 5yr price: Apply an optimistic appreciation % to the base price. Show the math. "Base ₹X/sq yd × 1.Y = ₹Z/sq yd in bull case."
+4. Calculate best-case 10yr price: Compound the same optimistic trajectory further, accounting for the named catalysts maturing.
+5. Calculate best-case total return in INR and %: (best-case value − acquisition cost − construction cost) / total investment.
+6. State the catalyst timeline: when is the key upside trigger realistically expected to materialise (cite a year/quarter if the knowledge base or prior agents give one).
+7. Reference the location and market agents' specific positive findings by name — do not repeat generic optimism.
+8. Assess bull probability: High if multiple catalysts are confirmed/funded/under construction; Medium if one plausible but unconfirmed catalyst; Low if the case is mostly speculative.
+9. Write one sentence on the maximum upside if everything goes right.

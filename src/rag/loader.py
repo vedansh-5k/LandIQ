@@ -1,7 +1,7 @@
 """
 loader.py
 ---------
-Loads PDF documents from data/sample_reports/ folder.
+Loads PDF documents from data/land_reports/ folder.
 Handles encrypted/password-protected PDFs gracefully by skipping them.
 """
 
@@ -11,7 +11,7 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from src.utils.config import CHUNK_SIZE, CHUNK_OVERLAP
 
 
-def load_documents(data_path: str = "./data/sample_reports") -> list:
+def load_documents(data_path: str = "./data/land_reports") -> list:
     if not os.path.exists(data_path):
         print(f"Data folder not found: {data_path}")
         os.makedirs(data_path, exist_ok=True)
@@ -20,7 +20,7 @@ def load_documents(data_path: str = "./data/sample_reports") -> list:
     pdf_files = [f for f in os.listdir(data_path) if f.endswith(".pdf")]
 
     if not pdf_files:
-        print("No PDF files found in data/sample_reports/")
+        print("No PDF files found in data/land_reports/")
         return []
 
     print(f"Found {len(pdf_files)} PDF files")
@@ -60,7 +60,7 @@ def split_documents(documents: list) -> list:
     return chunks
 
 
-def load_and_split(data_path: str = "./data/sample_reports") -> list:
+def load_and_split(data_path: str = "./data/land_reports") -> list:
     documents = load_documents(data_path)
     if not documents:
         return []
