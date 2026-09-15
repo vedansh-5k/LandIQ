@@ -1,33 +1,27 @@
 """
-landiq_agent_config_component.py — "LandIQ Agent Config" Langflow box (Config 2)
+landiq_agent_config_component.py — "LandIQ Agent Config" Langflow box (Config 2, v3 — final)
 -----------------------------------------------------------------------------
-PASTE THIS WHOLE FILE into a new Custom Component in Langflow's UI.
-See the numbered steps Claude gave you in chat for exactly how.
-
-WHAT THIS BOX IS:
-This is Config 2 that sir asked for — the agent-level config. Pick an agent
-from the dropdown (read live from agents_registry/ — nothing hardcoded, add
-a new agent folder and it shows up here automatically), pick which Config 1
-it should use (defaults to landiq_model), hit Run.
+Config 2 — binds one agent to the ONE wired "LandIQ Model" box, not a name
+string looked up in the backend's own database. Wire "LandIQ Model"'s
+"Model Config" output straight into the "Model" input here — that single
+box already carries the full priority-1/priority-2 chain internally, so
+one wire is all this needs. The provider/model/api_key on that upstream
+box (both priorities) are exactly what gets used — this box does not
+know or care whether that key belongs to LandIQ or to a completely
+different client.
 
 What actually happens when you run it:
-  1. It tells the backend "this agent now uses this config" — a REAL,
-     persistent setting (POST /agent-config/{agent}/set-llm-config). This is
-     not just a one-off test — from this point on, that agent uses this
-     config every time it runs anywhere in LandIQ, until you change or clear
-     it, exactly like sir described ("agent uses config 1 directly").
-  2. It then runs that agent once, for real, on a sample property, so you
-     can see the config-2-> config-1 chain working end to end right here in
-     the Playground ("test board").
-
-Follows the same house style as your existing "Orchestrator LLM" and
-"PII Safety Guardrail" boxes: a thin wrapper that calls the backend and
-returns the result. No new backend logic lives here — it only calls the two
-new /agent-config endpoints and the existing /run-single-agent endpoint.
+  Sends agent_name + the property data + the wired model(s)'
+  provider/model/api_key explicitly to the LandIQ backend's real agent
+  logic (agents_registry/<agent>/AGENT.md — prompt, RAG, JSON parsing —
+  that part legitimately stays server-side, it's the actual product).
+  The backend uses the model/key you wired in, not anything it has saved
+  itself. If priority 2 was set on the LandIQ Model box, the backend
+  builds it as a real fallback should priority 1 be unavailable.
 """
 
 from lfx.custom.custom_component.component import Component
-from lfx.io import DropdownInput, MessageTextInput, Output
+from lfx.io import DropdownInput, DataInput, MessageTextInput, Output
 from lfx.schema.message import Message
 import json
 import os
@@ -76,10 +70,10 @@ class LandIQAgentConfig(Component):
     display_name = "LandIQ Agent Config"
     description = (
         "Config 2 — binds one agent (read live from agents_registry/, "
-        "nothing hardcoded) to a Config-1 LLM config such as landiq_model. "
-        "The binding is real and persists: after this runs, that agent uses "
-        "the chosen config every time it runs, not just here. Also runs "
-        "the agent once immediately so you can see it working."
+        "nothing hardcoded) to the ONE wired 'LandIQ Model' box, which "
+        "already carries priority 1 and priority 2 internally. The "
+        "provider/model/API key on that upstream box are what actually "
+        "run this agent — no config name, no database lookup."
     )
     icon = "user-cog"
     name = "LandIQAgentConfig"
@@ -92,17 +86,16 @@ class LandIQAgentConfig(Component):
             value=_AGENT_NAMES[0] if _AGENT_NAMES else "",
             info="Which agent (from agents_registry/) this config applies to.",
         ),
-        MessageTextInput(
-            name="config_full_name",
-            display_name="LLM Config Name",
-            value="landiq_model",
-            info="Which Config-1 this agent should use.",
+        DataInput(
+            name="model_config",
+            display_name="Model",
+            info="Wire in 'LandIQ Model'’s Model Config output — carries both priority 1 and priority 2.",
         ),
         MessageTextInput(
             name="property_json",
             display_name="Test Property (JSON)",
             value=_DEFAULT_PROPERTY_JSON,
-            info="Sample property data used only to test-run the agent here.",
+            info="Sample property data used to test-run the agent here.",
         ),
     ]
 
@@ -110,40 +103,47 @@ class LandIQAgentConfig(Component):
         Output(display_name="Agent Output", name="agent_output", method="run_bound_agent"),
     ]
 
+    def _model_overrides(self) -> dict:
+        """Reads the single wired Data object — {"primary": {...},
+        "fallback": {...} or None} — and turns it into the explicit
+        override fields dynamic_agent.py understands."""
+        raw = getattr(self.model_config, "data", None) if self.model_config is not None else None
+        raw = raw or {}
+        primary = raw.get("primary") or {}
+        fallback = raw.get("fallback") or {}
+
+        overrides = {}
+        if primary.get("provider") and primary.get("model"):
+            overrides["llm_model_override"] = f"{primary['provider']}/{primary['model']}"
+            if primary.get("api_key"):
+                overrides["llm_api_key_override"] = primary["api_key"]
+        if fallback.get("provider") and fallback.get("model"):
+            overrides["llm_fallback_override"] = f"{fallback['provider']}/{fallback['model']}"
+            if fallback.get("api_key"):
+                overrides["llm_fallback_api_key_override"] = fallback["api_key"]
+        return overrides
+
     def run_bound_agent(self) -> Message:
         import httpx
 
         agent_name = (self.agent_name or "").strip()
-        full_name = (self.config_full_name or "landiq_model").strip()
-
         if not agent_name:
             return Message(text="[error] No agent selected.")
-
-        try:
-            bind = httpx.post(
-                f"{BACKEND_URL}/agent-config/{agent_name}/set-llm-config",
-                json={"full_name": full_name},
-                timeout=15,
-            )
-            bind_data = bind.json() if bind.status_code == 200 else None
-            if not bind_data:
-                msg = f"[bind failed] HTTP {bind.status_code}: {bind.text[:200]}"
-                self.status = msg
-                return Message(text=msg)
-        except Exception as e:
-            msg = f"[bind error] {type(e).__name__}: {str(e)[:200]}"
-            self.status = msg
-            return Message(text=msg)
 
         try:
             state = json.loads(self.property_json or "{}")
         except Exception:
             state = {}
 
+        overrides = self._model_overrides()
+        if not overrides:
+            return Message(text="[error] No model wired in — connect 'LandIQ Model'’s Model Config output to the Model input first.")
+        state.update(overrides)
+
         try:
             r = httpx.post(
-                f"{BACKEND_URL}/run-single-agent",
-                json={"agent_name": agent_name, "state": state},
+                f"{BACKEND_URL}/internal/run-single-agent",
+                json={"agent_name": agent_name, **state},
                 timeout=120,
             )
             data = r.json()
@@ -153,11 +153,11 @@ class LandIQAgentConfig(Component):
             return Message(text=msg)
 
         self.status = data
-        if data.get("success"):
-            result = data.get("result", {})
-            out = result.get(f"{agent_name}_output", result)
-            return Message(
-                text=f"[{agent_name}] now bound to '{full_name}' — this run's result:\n\n"
-                     f"{json.dumps(out, indent=2, default=str)}"
-            )
-        return Message(text=f"[agent run failed] {json.dumps(data)[:300]}")
+        model_label = overrides.get("llm_model_override", "?")
+        fallback_label = overrides.get("llm_fallback_override")
+        out = data.get(f"{agent_name}_output") or data
+        return Message(
+            text=f"[{agent_name}] ran with wired model '{model_label}'"
+                 f"{' (fallback: ' + fallback_label + ')' if fallback_label else ''}:\n\n"
+                 f"{json.dumps(out, indent=2, default=str)}"
+        )

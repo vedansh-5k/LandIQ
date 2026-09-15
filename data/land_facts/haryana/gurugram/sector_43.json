@@ -1,0 +1,16 @@
+{
+  "area": "Sector 43",
+  "city": "Gurugram",
+  "state": "Haryana",
+  "property_type": "Residential built property (mixed builder floors/apartments) secondary market listing average",
+  "price_per_sqyd_range": {"min": 139950, "max": 139950, "unit": "INR", "note": "Converted from Rs.15,550/sqft at 9 sqft/sqyd."},
+  "price_per_sqft": 15550,
+  "yoy_trend_pct": null,
+  "comparable_localities": ["Sector 44", "Sector 45", "DLF Old Colony"],
+  "notable_projects": [],
+  "infra_notes": "Adjacent to Sector 44; part of the same established central/old Gurugram belt near DLF and Golf Course Road.",
+  "source_name": "Square Yards locality overview page for Sector 43, Gurgaon",
+  "source_url": "https://www.squareyards.com/blog/circle-rate-in-gurgaon-crc",
+  "date_collected": "2026-09-04",
+  "confidence": "published_report"
+}

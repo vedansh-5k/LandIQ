@@ -1,0 +1,16 @@
+{
+  "area": "Gurugram",
+  "city": "Gurugram",
+  "state": "Haryana",
+  "property_type": "Residential built property (Ready-to-Move + Under-Construction average, all configurations)",
+  "price_per_sqyd_range": {"min": 131850, "max": 131850, "unit": "INR", "note": "Converted from Rs.14,650/sqft (Q3 2024 city average) at 9 sqft/sqyd."},
+  "price_per_sqft": 14650,
+  "yoy_trend_pct": 32.5,
+  "comparable_localities": ["DLF", "Golf Course Road", "Golf Course Extension", "New Gurgaon", "Dwarka Expressway", "Sohna Road", "Central Gurgaon", "Southern Peripheral Road"],
+  "notable_projects": ["Adani M2K Oyster Grande (Sector 102)", "DLF Gardencity Enclave (Sector 93)", "Birla Navya (Sector 63A)", "Ireo The Corridors (Sector 67)", "Ambience Creacions (Sector 22)", "Godrej Zenith (Sector 89)", "Signature Global Park (Sector 35, Sohna)"],
+  "infra_notes": "City-wide Gurugram average rate: Rs.8,288/sqft (Q3 2022) -> Rs.11,055/sqft (Q3 2023) -> Rs.14,650/sqft (Q3 2024) = +32.5% YoY (Q3'23-Q3'24) and +76.7% over two years, driven by Dwarka Expressway completion improving connectivity to Delhi. By property sub-type (Q3 2024): Builder Floor Rs.12,700/sqft, Multi-storey Apartment Rs.13,200/sqft, Residential House Rs.16,100/sqft, Villa Rs.25,600/sqft. Most recent available trend (Jan-Mar 2026 sample report, same repo): Gurugram demand -2.0% QoQ, supply +10.1% QoQ (strong new-launch activity), price -0.3% QoQ — a mild cooling/correction after the 2022-2024 surge, not a reversal of the multi-year uptrend.",
+  "source_name": "Magicbricks PropIndex — India's Residential Market Overview, Gurugram, Jul-Sep 2024 (full report already in this repo at data/land_reports/PropIndex_Gurugram1.pdf); trend update from Magicbricks PropIndex Gurugram Jan-Mar 2026 sample (data/land_reports/Gurugram-Sample-JFM26 bbb.pdf)",
+  "source_url": "https://www.magicbricks.com/",
+  "date_collected": "2024-Q3 report, 2026-Q1 trend update (both PDFs already indexed in data/land_reports/)",
+  "confidence": "published_report"
+}

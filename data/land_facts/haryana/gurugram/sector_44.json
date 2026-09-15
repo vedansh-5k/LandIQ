@@ -1,0 +1,16 @@
+{
+  "area": "Sector 44",
+  "city": "Gurugram",
+  "state": "Haryana",
+  "property_type": "Residential built property (mixed builder floors/apartments/independent houses) secondary market — NOT a verified raw vacant-plot rate",
+  "price_per_sqyd_range": {"min": 128000, "max": 152000, "unit": "INR", "note": "Interpolated: average of Sector 43 (Rs.15,550/sqft) and Sector 45 (Rs.16,100/sqft) listing rates from Square Yards, converted at 9 sqft/sqyd. NOT a direct measurement for Sector 44 itself — no direct listing-price figure for Sector 44 was found."},
+  "price_per_sqft": 15825,
+  "yoy_trend_pct": null,
+  "comparable_localities": ["Sector 43", "Sector 45", "DLF Phase 1-5 (Old Gurgaon)", "Golf Course Road", "Central Gurgaon"],
+  "notable_projects": [],
+  "infra_notes": "Sector 44 sits in central/old Gurugram, directly between Sector 43 and Sector 45, near the Golf Course Road / DLF corridor and MG Road — an established, mature locality (not a new-launch peripheral sector), which is why it is priced closer to DLF/Golf Course Road micro-markets than to newer sectors like New Gurgaon or Dwarka Expressway in Gurugram-wide PropIndex data (see gurugram_city_overview.json).",
+  "source_name": "Estimated from Square Yards locality listing pages for adjacent Sector 43 and Sector 45 (accessed via web search) — no direct Sector 44 figure or official government circle rate was retrievable this pass. An official Haryana Collector Rate PDF for Gurugram Tehsil (2024-2025, effective 01.12.2024) exists at gurugram.gov.in/collectorrates/ but is a scanned image PDF with no extractable text layer — its exact Sector 44 rate is NOT yet captured here and would need OCR or manual lookup to add.",
+  "source_url": "https://www.squareyards.com/sector-44-in-gurgaon-overview-56",
+  "date_collected": "2026-09-04",
+  "confidence": "estimated_from_nearby"
+}

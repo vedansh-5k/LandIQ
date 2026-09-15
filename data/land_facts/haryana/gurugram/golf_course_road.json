@@ -1,0 +1,16 @@
+{
+  "area": "Golf Course Road",
+  "city": "Gurugram",
+  "state": "Haryana",
+  "property_type": "Residential built property, micro-market average (Magicbricks demand/supply ranking)",
+  "price_per_sqyd_range": {"min": 210600, "max": 210600, "unit": "INR", "note": "Converted from Rs.23,400/sqft at 9 sqft/sqyd."},
+  "price_per_sqft": 23400,
+  "yoy_trend_pct": null,
+  "comparable_localities": ["DLF", "Sector 43", "Sector 44", "Sector 45"],
+  "notable_projects": [],
+  "infra_notes": "The single highest-priced micro-market tracked in Gurugram's Q3 2024 demand ranking — the premium ceiling of the central/old Gurugram belt that Sector 44 sits within.",
+  "source_name": "Magicbricks PropIndex — Gurugram, Jul-Sep 2024, Micro-Market Statistics table",
+  "source_url": "https://www.magicbricks.com/",
+  "date_collected": "2024-Q3 (report already in data/land_reports/PropIndex_Gurugram1.pdf)",
+  "confidence": "published_report"
+}

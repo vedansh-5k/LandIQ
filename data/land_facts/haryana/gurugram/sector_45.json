@@ -1,0 +1,16 @@
+{
+  "area": "Sector 45",
+  "city": "Gurugram",
+  "state": "Haryana",
+  "property_type": "Residential built property (mixed builder floors/apartments) secondary market listing average",
+  "price_per_sqyd_range": {"min": 144900, "max": 144900, "unit": "INR", "note": "Converted from Rs.16,100/sqft at 9 sqft/sqyd."},
+  "price_per_sqft": 16100,
+  "yoy_trend_pct": null,
+  "comparable_localities": ["Sector 44", "Sector 43", "DLF Phase 1-5"],
+  "notable_projects": [],
+  "infra_notes": "Adjacent to Sector 44 on the other side; part of the same established central/old Gurugram belt near DLF and Golf Course Road.",
+  "source_name": "Square Yards locality overview page for Sector 44, Gurgaon (comparison table)",
+  "source_url": "https://www.squareyards.com/sector-44-in-gurgaon-overview-56",
+  "date_collected": "2026-09-04",
+  "confidence": "published_report"
+}

@@ -474,32 +474,64 @@ def run_dynamic_agent(agent_name, state):
     # ── Optional live model override (e.g. a Langflow node's "llm_model"
     # dropdown — "groq/llama-3.3-70b-versatile" or "gemini/gemini-1.5-flash").
     # Unset/unrecognised -> falls through to the normal active-config
-    # selection below exactly as before.
-    llm = None
-    llm_override = state.get("llm_model_override")
-    if isinstance(llm_override, str) and "/" in llm_override:
-        _provider_hint, _, _model_hint = llm_override.partition("/")
+    # selection below exactly as before. llm_api_key_override lets a caller
+    # (e.g. a client's own Langflow canvas, bringing their own account)
+    # supply their own key instead of this project's GROQ_API_KEY/
+    # GOOGLE_API_KEY — falls back to those env vars when no override key is
+    # given, so every existing caller that only ever sent llm_model_override
+    # behaves exactly as before. llm_fallback_override (+
+    # llm_fallback_api_key_override) is a second provider/model to build if
+    # the primary override can't be constructed at all (e.g. no key
+    # available for it) — a real "priority 2", not cosmetic.
+    def _build_override_llm(model_str, key_override):
+        if not (isinstance(model_str, str) and "/" in model_str):
+            return None
+        _provider_hint, _, _model_hint = model_str.partition("/")
         _provider_hint = _provider_hint.strip().lower()
         _model_hint = _model_hint.strip()
+        if _provider_hint == "groq":
+            _key = key_override or os.environ.get("GROQ_API_KEY")
+            if not _key:
+                return None
+            from langchain_groq import ChatGroq
+            return ChatGroq(
+                api_key=_key,
+                model=_model_hint or os.environ.get("GROQ_MODEL", "openai/gpt-oss-120b"),
+                temperature=agent["temperature"],
+                max_tokens=_resolve_max_out_tokens(),
+            )
+        if _provider_hint in ("gemini", "google"):
+            _key = key_override or os.environ.get("GOOGLE_API_KEY")
+            if not _key:
+                return None
+            from langchain_google_genai import ChatGoogleGenerativeAI
+            return ChatGoogleGenerativeAI(
+                google_api_key=_key,
+                model=_model_hint or "gemini-1.5-flash",
+                temperature=agent["temperature"],
+            )
+        return None
+
+    llm = None
+    llm_override = state.get("llm_model_override")
+    if llm_override:
         try:
-            if _provider_hint == "groq" and os.environ.get("GROQ_API_KEY"):
-                from langchain_groq import ChatGroq
-                llm = ChatGroq(
-                    api_key=os.environ["GROQ_API_KEY"],
-                    model=_model_hint or os.environ.get("GROQ_MODEL", "openai/gpt-oss-120b"),
-                    temperature=agent["temperature"],
-                    max_tokens=_resolve_max_out_tokens(),
-                )
-            elif _provider_hint in ("gemini", "google") and os.environ.get("GOOGLE_API_KEY"):
-                from langchain_google_genai import ChatGoogleGenerativeAI
-                llm = ChatGoogleGenerativeAI(
-                    google_api_key=os.environ["GOOGLE_API_KEY"],
-                    model=_model_hint or "gemini-1.5-flash",
-                    temperature=agent["temperature"],
-                )
+            llm = _build_override_llm(llm_override, state.get("llm_api_key_override"))
         except Exception as e:
             logger.warning("[%s] llm_model_override '%s' failed: %s", agent_name, llm_override, str(e)[:100])
             llm = None
+        if llm is None:
+            fallback_override = state.get("llm_fallback_override")
+            if fallback_override:
+                try:
+                    llm = _build_override_llm(fallback_override, state.get("llm_fallback_api_key_override"))
+                    if llm is not None:
+                        logger.info("[%s] primary override unavailable, using fallback override '%s'",
+                                    agent_name, fallback_override)
+                except Exception as e:
+                    logger.warning("[%s] llm_fallback_override '%s' failed: %s",
+                                    agent_name, fallback_override, str(e)[:100])
+                    llm = None
 
     # ── Multimodal read path — only agents whose AGENT.md sets
     # accepts_images: true, and only when this run actually received

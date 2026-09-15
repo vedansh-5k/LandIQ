@@ -31,3 +31,30 @@ data/pixelrag_sir_test_source/
 
 # manual pre-redesign snapshot, not meant to be versioned
 frontend/index.html.bak_pre_redesign_20260812_224812
+
+# ── Local dev artifacts, debug dumps and one-off scripts ──────────────
+# Session scratch files: live Langflow flow snapshots taken before each
+# canvas edit, test payloads, debug output. Useful locally as undo points,
+# noise in the repo.
+scratch_*
+analyse_result*.json
+*.checkpoint
+image.png
+landiq_config_demo_flow_id.txt
+patch_config1_dropdown.py
+patch_config1_fix_realtime.py
+
+# Third-party Langflow source, copied locally only to read its internals
+# while debugging. Not this project's code.
+langflow_source_backup_*/
+langflow_env/
+
+# Built RAG vector store — regenerable from the source documents via the
+# ingestion pipeline (see README), so not versioned.
+chroma_db_land/
+
+# Source market-research PDFs (Knight Frank, Magicbricks, ANAROCK, Savills).
+# These are third-party copyrighted publications used locally as RAG input —
+# deliberately NOT redistributed. See README for how to supply your own.
+data/land_reports/
+data/land_reports_focus/
